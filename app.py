@@ -8,8 +8,8 @@ from utils.notify_admins import on_startup_notify
 menu_handlers.register_handlers_menu(dp)
 
 
-async def on_startup(dp):
-    await on_startup_notify(dp)
+async def on_startup(dispatcher):
+    await on_startup_notify(dispatcher)
 
     await create_db1()
 
@@ -17,5 +17,5 @@ async def on_startup(dp):
 
 
 if __name__ == '__main__':
-    executor.start_polling(dp, skip_updates=True, on_startup=on_startup)
+    executor.start_polling(dp, on_startup=on_startup)
 #  bot.polling(none_stop=True, interval=0)

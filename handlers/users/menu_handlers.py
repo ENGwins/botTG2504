@@ -5,7 +5,9 @@ from aiogram import types, Dispatcher
 from keyboards.inline.govno_kb import categories_keyboard, subcategory_keyboard, items_keyboard, item_keyboard, \
     buy_item, menu_cd
 from loader import dp
+from states.sizeUser import set_Vg, set_Vpg, set_Vb, set_sizeL, set_Vt, FSMClient, start_testing
 from utils.db_api.db_commands import get_item
+
 
 @dp.callback_query_handler(menu_cd.filter())
 async def navigate(call: types.CallbackQuery, callback_data: dict):
@@ -31,12 +33,12 @@ async def navigate(call: types.CallbackQuery, callback_data: dict):
 
 @dp.callback_query_handler(buy_item.filter())
 async def send_admin(call: Union[types.Message, types.CallbackQuery], callback_data: dict):
-    await call.answer('Отправили заявку',show_alert=True)
-    id_user_order= call.from_user.id
-    id_item_order=callback_data['item_id']
+    await call.answer('Отправили заявку', show_alert=True)
+    id_user_order = call.from_user.id
+    name_user_order=call.from_user.username
+    id_item_order = callback_data['item_id']
     await call.answer()
-    await call.bot.send_message(644812536,f'Новый заказ! \nТовар №{id_item_order} \nПользователь {id_user_order}')
-
+    await call.bot.send_message(644812536, f'Новый заказ! \nТовар №{id_item_order} \nПользователь Id {id_user_order} \nПользователь @{name_user_order}')
 
 
 async def show_menu1(message: types.Message):
@@ -74,3 +76,9 @@ async def show_item(callback: types.CallbackQuery, category, subcategory, item_i
 
 def register_handlers_menu(dp: Dispatcher):
     dp.register_message_handler(show_menu1, commands=['menu'])
+    dp.register_message_handler(start_testing,commands=['size'])
+    dp.register_message_handler(set_Vg, state=FSMClient.Vg)
+    dp.register_message_handler(set_Vpg, state=FSMClient.Vpg)
+    dp.register_message_handler(set_Vb, state=FSMClient.Vb)
+    dp.register_message_handler(set_Vt, state=FSMClient.Vt)
+    dp.register_message_handler(set_sizeL, state=FSMClient.sizeL)

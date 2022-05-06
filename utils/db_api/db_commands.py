@@ -2,12 +2,22 @@ from typing import List
 
 from sqlalchemy import and_
 
-from utils.db_api.database import Item, db
+from utils.db_api.database import Item, db, Size_users
 
 
 async def add_item(**kwargs):
     newitem = await Item(**kwargs).create()
     return newitem
+
+
+async def add_size(**kwargs):
+    newsize = await Size_users(**kwargs).create()
+    return newsize
+
+
+async def show_size_user(user_id) -> Size_users:
+    all_size=await Size_users.query.where(Size_users.id_user == user_id).gino.all()
+    return all_size
 
 
 # Получение категорий
