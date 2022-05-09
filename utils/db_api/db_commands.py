@@ -1,5 +1,6 @@
 from typing import List
 
+from aiogram import types
 from sqlalchemy import and_
 
 from utils.db_api.database import Item, db, Size_users
@@ -16,7 +17,7 @@ async def add_size(**kwargs):
 
 
 async def show_size_user(user_id) -> Size_users:
-    all_size=await Size_users.query.where(Size_users.id_user == user_id).gino.all()
+    all_size = await Size_users.query.where(Size_users.id_user == user_id).gino.all()
     return all_size
 
 
@@ -54,3 +55,18 @@ async def get_items(category_code, subcategory_code) -> List[Item]:
 async def get_item(item_id) -> Item:
     item = await Item.query.where(Item.id == item_id).gino.first()
     return item
+
+
+async def get_photo(item_id) -> Item:
+    item_photo = await Item.select("photo").where(Item.id == item_id).gino.scalar()
+    return item_photo
+
+
+async def delete_size(user_id):
+    size = await Size_users.query.where(Size_users.id_user == user_id).gino.first()
+    await size.delete()
+
+
+async def check_z(user_id):   #  смотрим есть ли зайпись данных по Айди клиента
+    check=await db.scalar(db.exists(Size_users.query.where(Size_users.id_user == user_id)).select())
+    return check

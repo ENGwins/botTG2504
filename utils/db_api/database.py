@@ -1,10 +1,12 @@
 import asyncio
 
+
 from gino import Gino
 from gino.schema import GinoSchemaVisitor
 from sqlalchemy import sql
 
 from data.config import POSTGRES_URI
+
 
 db = Gino()
 
@@ -26,10 +28,13 @@ class Item(db.Model):
     name = db.Column(db.String(50))
     photo = db.Column(db.String(250))
     price = db.Column(db.Integer)
+    decription = db.Column(db.String)
 
     def __repr__(self):
         return f"""
-Товар №{self.id}- {self.name}
+Наименование {self.name}
+
+Описание: {self.decription}
 Цена: {self.price}
 """
 
@@ -48,14 +53,16 @@ class Size_users(db.Model):
     size_Vt = db.Column(db.String(50))
     size_Vb = db.Column(db.String(50))
     sizeL = db.Column(db.String(50))
+    email = db.Column(db.String(50))
 
     def __repr__(self):
         return f"""
-Vg: {self.size_Vg}
-Vpg: {self.size_Vpg}
-Vt: {self.size_Vt}
-Vb: {self.size_Vb}
-sizeL: {self.sizeL}
+Обхват груди: {self.size_Vg}
+Обхват под грудью: {self.size_Vpg}
+Обхват бедер: {self.size_Vb}
+Обхват талии: {self.size_Vt}
+Размер груди: {self.sizeL}
+Email: {self.email}
 """
 
 
@@ -66,4 +73,3 @@ async def create_db1():
 
 
 asyncio.get_event_loop().run_until_complete(create_db1())
-

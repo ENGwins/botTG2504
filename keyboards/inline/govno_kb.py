@@ -36,7 +36,7 @@ async def subcategory_keyboard(category):
     for subcategory in subcategories:
         number_of_items = await count_items(category_code=category, subcategory_code=subcategory.subcategory_code)
 
-        button_text = f"{subcategory.subcategory_code}({number_of_items}шт)"
+        button_text = f"{subcategory.subcategory_name}({number_of_items}шт)"
         callback_data = make_callback_data(level=CURRENT_LEVEL + 1,
                                            category=category,
                                            subcategory=subcategory.subcategory_code)
@@ -80,6 +80,7 @@ async def items_keyboard(category, subcategory):
 def item_keyboard(category, subcategory, item_id):
     CURRENT_LEVEL = 3
     markup = InlineKeyboardMarkup()
+
     markup.row(
         InlineKeyboardButton(text="Оформить", callback_data=buy_item.new(item_id=item_id))
 

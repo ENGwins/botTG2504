@@ -2,25 +2,31 @@ from aiogram import types
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import StatesGroup, State
 
+
+from keyboards.keyvoard import kb_yes_no, kb_size, mainMenu
 from loader import bot
-from utils.db_api.db_commands import add_size, show_size_user
+from utils.db_api.db_commands import add_size, show_size_user, delete_size, check_z
 
 
 class FSMClient(StatesGroup):
+    V = State()
     Vg = State()
     Vpg = State()
     Vb = State()
     Vt = State()
     sizeL = State()
+    email = State()
     check_size = State()
 
 
-# Начало диалога загрузки нового пункта меню
 async def start_testing(message: types.Message):
-    await FSMClient.Vg.set()
-    photoVg = 'AgACAgIAAxkBAAIVW2Jb3zfT-MVjX5lD9eQNN-TaLFGLAAIVvDEbOJjZSkGR-BcJnxPWAQADAgADcwADJAQ'
-    await bot.send_photo(message.from_user.id, photoVg)
-    await bot.send_message(message.from_user.id, 'Введите размер обхват груди')
+    user_id = message.from_user.id
+    check = await check_z(user_id)
+    if check:
+        await delete_size(user_id)
+
+    await bot.send_message(message.from_user.id, 'Следуйте подсказам', reply_markup=kb_size)
+    await FSMClient.V.set()
 
 
 # Выход из состояний
@@ -29,7 +35,16 @@ async def cancel_handler1(message: types.Message, state: FSMContext):
     if current_state is None:
         return
     await state.finish()
-    await message.reply("Отмена")
+    await bot.send_message(message.from_user.id, "Мы в главном меню", reply_markup=mainMenu)
+
+
+# Начало диалога загрузки нового пункта меню
+async def set_V(message: types.Message, state: FSMContext):
+    #    await FSMClient.Vg.set()
+    await FSMClient.next()
+    photoVg = 'AgACAgIAAxkBAAIVW2Jb3zfT-MVjX5lD9eQNN-TaLFGLAAIVvDEbOJjZSkGR-BcJnxPWAQADAgADcwADJAQ'
+    await bot.send_photo(message.from_user.id, photoVg)
+    await bot.send_message(message.from_user.id, 'Введите размер обхват груди')
 
 
 # Ловим ответ и пшем в словарь
@@ -66,33 +81,48 @@ async def set_Vt(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['size_Vt'] = message.text
     await FSMClient.next()
-    await bot.send_message(message.from_user.id, 'Введите ваш размер груди')
+    await bot.send_message(message.from_user.id, 'Введите ваш размер лифа')
 
-
-# Четвертый ответ
 
 async def set_sizeL(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['sizeL'] = message.text
     async with state.proxy() as data:
         data['id_user'] = message.from_user.id
+
+    await bot.send_message(message.from_user.id, 'Введите контактый email')
+    await FSMClient.next()
+
+
+async def set_email(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        data['email'] = message.text
+
     await add_size(id_user=data['id_user'],
                    size_Vg=data['size_Vg'],
                    size_Vpg=data['size_Vpg'],
                    size_Vt=data['size_Vt'],
                    size_Vb=data['size_Vb'],
-                   sizeL=data['sizeL']
+                   sizeL=data['sizeL'],
+                   email=data['email']
                    )
-    user_id=message.from_user.id
-    siz=await show_size_user(user_id)
-    await bot.send_message(message.from_user.id, f'Твой размер {siz}')
-    await FSMClient.next()
-    await bot.send_message(message.from_user.id, 'Все верно? пока написать Да')
+    user_id = message.from_user.id
+    siz = await show_size_user(user_id)
+    await bot.send_message(message.from_user.id, f'Мои данные {siz}')
+    await bot.send_message(message.from_user.id, 'Все верно?', reply_markup=kb_yes_no)
 
+    await FSMClient.next()
+
+
+# Четвертый ответ
 
 
 async def yes_not(message: types.Message, state: FSMContext):
     if message.text == 'Да':
-        await bot.send_message(message.from_user.id, 'Размеры добавлены!')
+        await bot.send_message(message.from_user.id, 'Информация добавлена!', reply_markup=mainMenu)
         await state.finish()
-
+    elif message.text == 'Ввести заново':
+        await bot.send_message(message.from_user.id, 'Удаляем запись', reply_markup=kb_size)
+        user_id = message.from_user.id
+        await delete_size(user_id)
+        await FSMClient.first()
