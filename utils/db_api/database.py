@@ -71,8 +71,21 @@ class Purchase(db.Model):
     successful = db.Column(db.Boolean, default=False)  # cтатус покупки
 
 
+class Admin(db.Model):
+    __tablename__ = 'forAdmin'
+    query: sql.Select
+    id = db.Column(db.Integer, db.Sequence('user_id_seq'), primary_key=True)
+    user_id = db.Column(db.BigInteger)  # id покупателя
+    user_first_name = db.Column(db.String(50))
+    user_last_name = db.Column(db.String(50))
 
+    def __repr__(self):
+        return f"""
+ID: {self.user_id}
+Имя: {self.user_first_name}
+Фамилия: {self.user_last_name}
 
+"""
 
 
 async def create_db1():

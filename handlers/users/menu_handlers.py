@@ -13,7 +13,7 @@ from states.sizeUser import start_testing, cancel_handler1, set_V, FSMClient, se
 from utils.db_api.database import Item
 
 from utils.db_api.db_commands import get_item, show_size_user, check_z, get_photo, get_name_item, get_price_item, \
-    get_decr_item
+    get_decr_item, check_user, new_user
 
 
 @dp.callback_query_handler(menu_cd.filter())
@@ -62,6 +62,19 @@ async def send_admin(call: Union[types.Message, types.CallbackQuery], callback_d
 
 async def start(message: types.Message):
     await bot.send_message(message.from_user.id, "Мы в главном меню", reply_markup=mainMenu)
+    id_user=message.from_user.id
+    firstname_user=message.from_user.first_name
+    lastname_user = message.from_user.last_name
+
+    check=await check_user(id_user)
+    if check:
+        pass
+    else:
+        await bot.send_message(644812536, 'Новый пользователь! \n'
+                                          f'ID {id_user}\n'
+                                          f'{firstname_user}')
+        await new_user(user_id=id_user,user_first_name=firstname_user,user_last_name=lastname_user)
+
 
 
 async def show_menu1(message: types.Message):
@@ -168,10 +181,10 @@ async def bot_message(message: types.Message):
 
 
 def register_handlers_menu(dp: Dispatcher):
+
     dp.register_message_handler(show_menu1, text="Каталог")
     dp.register_message_handler(start, text='Главное меню')
     dp.register_message_handler(start, commands=['start'], state=None)
-
     dp.register_message_handler(start_testing, text='Ввести заново', state='*')
     dp.register_message_handler(start_testing, text='Изменение размеров', state='*')
     dp.register_message_handler(cancel_handler1, state="*", commands="Главное меню")
@@ -185,4 +198,4 @@ def register_handlers_menu(dp: Dispatcher):
     dp.register_message_handler(set_email, state=FSMClient.email)
     dp.register_message_handler(yes_not, state=FSMClient.check_size)
     dp.register_message_handler(bot_message, state='*')
-    dp.register_message_handler(load_photo, content_types=["photo"])
+ #   dp.register_message_handler(load_photo, content_types=["photo"])

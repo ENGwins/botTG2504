@@ -65,7 +65,6 @@ async def set_Vpg(message: types.Message, state: FSMContext):
         data['size_Vpg'] = message.text
     await FSMClient.next()
     photoVb = 'AgACAgIAAxkBAAIVQ2Jb3uitgeUVDxVaQx1Gwtgt-IaOAAIPvDEbOJjZSmcykz8BbPEbAQADAgADcwADJAQ'
- #   photoVb = 'AgACAgIAAxkBAAIVT2Jb3wmNdbWxVPZpEUb5SkMhO36pAAITvDEbOJjZSj-DvGbsUJp8AQADAgADcwADJAQ'
     await bot.send_photo(message.from_user.id, photoVb)
     await bot.send_message(message.from_user.id, 'Напишите Ваш обхват в талии')
 
@@ -83,8 +82,6 @@ async def set_Vb(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['size_Vb'] = message.text
     await FSMClient.next()
-
-
     await bot.send_message(message.from_user.id, 'Напишите Ваш размер лифа')
 
 

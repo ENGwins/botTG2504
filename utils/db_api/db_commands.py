@@ -2,8 +2,7 @@ from typing import List
 
 from sqlalchemy import and_
 
-
-from utils.db_api.database import Item, db, Size_users
+from utils.db_api.database import Item, db, Size_users, Admin
 
 
 async def add_item(**kwargs):
@@ -84,4 +83,14 @@ async def delete_size(user_id):
 
 async def check_z(user_id):  # смотрим есть ли зайпись данных по Айди клиента
     check = await db.scalar(db.exists(Size_users.query.where(Size_users.id_user == user_id)).select())
+    return check
+
+
+# ADMIN________________________________________________________________
+async def new_user(**kwargs):
+    newuser = await Admin(**kwargs).create()
+    return newuser
+
+async def check_user(user_id):  # смотрим есть ли зайпись данных по Айди клиента
+    check = await db.scalar(db.exists(Admin.query.where(Admin.user_id == user_id)).select())
     return check
