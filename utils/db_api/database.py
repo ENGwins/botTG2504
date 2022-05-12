@@ -1,12 +1,10 @@
 import asyncio
 
-
 from gino import Gino
 from gino.schema import GinoSchemaVisitor
-from sqlalchemy import sql
+from sqlalchemy import sql, TIMESTAMP, JSON
 
 from data.config import POSTGRES_URI
-
 
 db = Gino()
 
@@ -30,14 +28,6 @@ class Item(db.Model):
     price = db.Column(db.Integer)
     decription = db.Column(db.String)
 
-    def __repr__(self):
-        return f"""
-Наименование {self.name}
-
-Описание: {self.decription}
-Цена: {self.price}
-"""
-
 
 class Size_users(db.Model):
     __tablename__ = 'Size_users'
@@ -54,16 +44,35 @@ class Size_users(db.Model):
     size_Vb = db.Column(db.String(50))
     sizeL = db.Column(db.String(50))
     email = db.Column(db.String(50))
+    referral = db.Column(db.Integer)
 
     def __repr__(self):
         return f"""
 Обхват груди: {self.size_Vg}
 Обхват под грудью: {self.size_Vpg}
-Обхват бедер: {self.size_Vb}
 Обхват талии: {self.size_Vt}
-Размер груди: {self.sizeL}
+Обхват бедер: {self.size_Vb}
+Размер лифа: {self.sizeL}
 Email: {self.email}
 """
+
+
+class Purchase(db.Model):
+    __tablename__ = 'purchases'
+    query: sql.Select
+    id = db.Column(db.Integer, db.Sequence('user_id_seq'), primary_key=True)
+    buyer = db.Column(db.BigInteger)  # id покупателя
+    item_id = db.Column(db.Integer)
+    amount = db.Column(db.Integer)  # сумма покупки
+    quantity = db.Column(db.Integer)  # количество товаров покупки
+    purchase_time = db.Column(TIMESTAMP)  # время покупки
+    shipping_adress = db.Column(JSON)  # адрес
+    phone_number = db.Column(db.String(50))
+    successful = db.Column(db.Boolean, default=False)  # cтатус покупки
+
+
+
+
 
 
 async def create_db1():

@@ -1,7 +1,7 @@
 from typing import List
 
-from aiogram import types
 from sqlalchemy import and_
+
 
 from utils.db_api.database import Item, db, Size_users
 
@@ -53,7 +53,7 @@ async def get_items(category_code, subcategory_code) -> List[Item]:
 
 
 async def get_item(item_id) -> Item:
-    item = await Item.query.where(Item.id == item_id).gino.first()
+    item = await Item.select("name").where(Item.id == item_id).gino.scalar()
     return item
 
 
@@ -62,11 +62,26 @@ async def get_photo(item_id) -> Item:
     return item_photo
 
 
+async def get_name_item(item_id) -> Item:
+    name_photo = await Item.select("name").where(Item.id == item_id).gino.scalar()
+    return name_photo
+
+
+async def get_price_item(item_id) -> Item:
+    price_photo = await Item.select("price").where(Item.id == item_id).gino.scalar()
+    return price_photo
+
+
+async def get_decr_item(item_id) -> Item:
+    decr_photo = await Item.select("decription").where(Item.id == item_id).gino.scalar()
+    return decr_photo
+
+
 async def delete_size(user_id):
     size = await Size_users.query.where(Size_users.id_user == user_id).gino.first()
     await size.delete()
 
 
-async def check_z(user_id):   #  смотрим есть ли зайпись данных по Айди клиента
-    check=await db.scalar(db.exists(Size_users.query.where(Size_users.id_user == user_id)).select())
+async def check_z(user_id):  # смотрим есть ли зайпись данных по Айди клиента
+    check = await db.scalar(db.exists(Size_users.query.where(Size_users.id_user == user_id)).select())
     return check

@@ -13,15 +13,15 @@ def make_callback_data(level, category="0", subcategory="0", item_id="0"):
 
 async def categories_keyboard():
     CURRENT_LEVEL = 0
-    markup = InlineKeyboardMarkup()
+    markup = InlineKeyboardMarkup(row_width=1)
 
     categories = await get_categories()
     for category in categories:
         number_of_items = await count_items(category.category_code)  # функция подсчета товаров в категории
-        button_text = f"{category.category_name}({number_of_items}шт)"
+        button_text = f"{category.category_name} ({number_of_items} шт)"
         callback_data = make_callback_data(level=CURRENT_LEVEL + 1,
                                            category=category.category_code)
-        markup.insert(
+        markup.add(
             InlineKeyboardButton(text=button_text, callback_data=callback_data)
         )
 
@@ -30,7 +30,7 @@ async def categories_keyboard():
 
 async def subcategory_keyboard(category):
     CURRENT_LEVEL = 1
-    markup = InlineKeyboardMarkup()
+    markup = InlineKeyboardMarkup(row_width=1)
 
     subcategories = await get_subcategories(category)  # получаем подкатегории для нашей категории
     for subcategory in subcategories:
@@ -77,9 +77,9 @@ async def items_keyboard(category, subcategory):
     return markup
 
 
-def item_keyboard(category, subcategory, item_id):
+async def item_keyboard(category, subcategory, item_id):
     CURRENT_LEVEL = 3
-    markup = InlineKeyboardMarkup()
+    markup = InlineKeyboardMarkup(row_width=1)
 
     markup.row(
         InlineKeyboardButton(text="Оформить", callback_data=buy_item.new(item_id=item_id))
@@ -92,5 +92,7 @@ def item_keyboard(category, subcategory, item_id):
                                                               category=category,
                                                               subcategory=subcategory)
                              )
+
     )
+
     return markup
