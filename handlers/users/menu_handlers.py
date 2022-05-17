@@ -1,8 +1,10 @@
+import logging
 from typing import Union
 
 from aiogram import types, Dispatcher
 from aiogram.dispatcher.filters import Text
 
+from data.config import admins
 from keyboards.inline.govno_kb import categories_keyboard, subcategory_keyboard, items_keyboard, item_keyboard, \
     buy_item, menu_cd
 from keyboards.keyvoard import mainMenu, kb_start_size, sizeMain
@@ -48,12 +50,18 @@ async def send_admin(call: Union[types.Message, types.CallbackQuery], callback_d
         name_item = await Item.select('name').where(Item.id == id_item_order).gino.scalar()
         siz = await show_size_user(id_user_order)
 
-        await call.bot.send_message(644812536,
-                                    f'Новый заказ! \n'
-                                    f'Товар №{id_item_order} - {name_item} \n'
-                                    f'Пользователь Id {id_user_order} \n'
-                                    f'Пользователь @{name_user_order}\n'
-                                    f'{siz}')
+        for admin in admins:
+            try:
+                await call.bot.send_message(admin,
+                                            f'Новый заказ! \n'
+                                            f'Товар №{id_item_order} - {name_item} \n'
+                                            f'Пользователь Id {id_user_order} \n'
+                                            f'Пользователь @{name_user_order}\n'
+                                            f'{siz}')
+            except Exception as err:
+                logging.exception(err)
+
+
 
         await call.answer('Отправили заявку', show_alert=True)
     else:
@@ -70,11 +78,15 @@ async def start(message: types.Message):
     if check:
         pass
     else:
-        await bot.send_message(644812536, 'Новый пользователь! \n'
-                                          f'ID {id_user}\n'
-                                          f'{firstname_user}')
-        await new_user(user_id=id_user,user_first_name=firstname_user,user_last_name=lastname_user)
+        for admin in admins:
+            try:
 
+                await bot.send_message(admin, 'Новый пользователь! \n'
+                                                  f'ID {id_user}\n'
+                                                  f'{firstname_user}')
+                await new_user(user_id=id_user,user_first_name=firstname_user,user_last_name=lastname_user)
+            except Exception as err:
+                logging.exception(err)
 
 
 async def show_menu1(message: types.Message):

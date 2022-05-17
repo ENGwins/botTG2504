@@ -10,7 +10,7 @@ db = Gino()
 
 
 class Item(db.Model):
-    __tablename__ = 'catalog2'
+    __tablename__ = 'catalog2_local'
     query: sql.Select
 
     id = db.Column(db.Integer, db.Sequence('user_id_seq'), primary_key=True)
@@ -30,7 +30,7 @@ class Item(db.Model):
 
 
 class Size_users(db.Model):
-    __tablename__ = 'Size_users'
+    __tablename__ = 'Size_users_local'
     query: sql.Select
 
     id = db.Column(db.Integer, db.Sequence('user_id_seq'), primary_key=True)
@@ -58,7 +58,7 @@ Email: {self.email}
 
 
 class Purchase(db.Model):
-    __tablename__ = 'purchases'
+    __tablename__ = 'purchases_local'
     query: sql.Select
     id = db.Column(db.Integer, db.Sequence('user_id_seq'), primary_key=True)
     buyer = db.Column(db.BigInteger)  # id покупателя
@@ -72,7 +72,7 @@ class Purchase(db.Model):
 
 
 class Admin(db.Model):
-    __tablename__ = 'forAdmin'
+    __tablename__ = 'forAdmin_local'
     query: sql.Select
     id = db.Column(db.Integer, db.Sequence('user_id_seq'), primary_key=True)
     user_id = db.Column(db.BigInteger)  # id покупателя
