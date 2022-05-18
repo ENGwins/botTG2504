@@ -4,7 +4,7 @@ from aiogram.dispatcher.filters.state import StatesGroup, State
 from aiogram.dispatcher.filters import Text
 
 from keyboards.keyvoard import kb_yes_no, kb_size, mainMenu
-from loader import bot
+from loader import bot, dp
 from utils.db_api.db_commands import add_size, show_size_user, delete_size, check_z
 
 
@@ -18,7 +18,8 @@ class FSMClient(StatesGroup):
     email = State()
     check_size = State()
 
-
+@dp.message_handler(text='Ввести заново', state='*')
+@dp.message_handler(text='Изменение размеров', state='*')
 async def start_testing(message: types.Message):
     user_id = message.from_user.id
     check = await check_z(user_id)
@@ -30,6 +31,8 @@ async def start_testing(message: types.Message):
 
 
 # Выход из состояний
+@dp.message_handler( state="*", commands="Главное меню")
+@dp.message_handler(Text(equals='Главное меню', ignore_case=True), state="*")
 async def cancel_handler1(message: types.Message, state: FSMContext):
     current_state = await state.get_state()
     if current_state is None:
@@ -39,6 +42,7 @@ async def cancel_handler1(message: types.Message, state: FSMContext):
 
 
 # Начало диалога загрузки нового пункта меню
+dp.message_handler(state=FSMClient.V)
 async def set_V(message: types.Message, state: FSMContext):
     #    await FSMClient.Vg.set()
     await FSMClient.next()
@@ -48,6 +52,7 @@ async def set_V(message: types.Message, state: FSMContext):
 
 
 # Ловим ответ и пшем в словарь
+@dp.message_handler(state=FSMClient.Vg)
 async def set_Vg(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['size_Vg'] = message.text
@@ -60,6 +65,7 @@ async def set_Vg(message: types.Message, state: FSMContext):
 
 
 # Ловим второй ответ
+@dp.message_handler(state=FSMClient.Vpg)
 async def set_Vpg(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['size_Vpg'] = message.text
@@ -69,6 +75,7 @@ async def set_Vpg(message: types.Message, state: FSMContext):
     await bot.send_message(message.from_user.id, 'Напишите Ваш обхват в талии')
 
 
+@dp.message_handler(state=FSMClient.Vt)
 async def set_Vt(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['size_Vt'] = message.text
@@ -78,13 +85,14 @@ async def set_Vt(message: types.Message, state: FSMContext):
     await bot.send_message(message.from_user.id, 'Напишите Ваш обхват в бедрах')
 
 # Ловим третий ответ
+@dp.message_handler(state=FSMClient.Vb)
 async def set_Vb(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['size_Vb'] = message.text
     await FSMClient.next()
     await bot.send_message(message.from_user.id, 'Напишите Ваш размер лифа')
 
-
+@dp.message_handler(state=FSMClient.sizeL)
 async def set_sizeL(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['sizeL'] = message.text
@@ -94,7 +102,7 @@ async def set_sizeL(message: types.Message, state: FSMContext):
     await bot.send_message(message.from_user.id, 'Контактый email')
     await FSMClient.next()
 
-
+@dp.message_handler(state=FSMClient.email)
 async def set_email(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['email'] = message.text
@@ -117,7 +125,7 @@ async def set_email(message: types.Message, state: FSMContext):
 
 # Четвертый ответ
 
-
+@dp.message_handler(state=FSMClient.check_size)
 async def yes_not(message: types.Message, state: FSMContext):
     if message.text == 'Да':
         await bot.send_message(message.from_user.id, 'Информация добавлена!', reply_markup=mainMenu)

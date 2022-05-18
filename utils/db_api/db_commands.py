@@ -91,6 +91,12 @@ async def new_user(**kwargs):
     newuser = await Admin(**kwargs).create()
     return newuser
 
+
 async def check_user(user_id):  # смотрим есть ли зайпись данных по Айди клиента
     check = await db.scalar(db.exists(Admin.query.where(Admin.user_id == user_id)).select())
     return check
+
+
+async def user_all_check():
+    users = await Admin.select("user_id").gino.all()
+    return users

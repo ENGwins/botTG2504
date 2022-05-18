@@ -1,21 +1,84 @@
 import logging
+
+from aiogram.utils.exceptions import BotBlocked
+from loguru import logger
+from asyncio import sleep
 from typing import Union
 
 from aiogram import types, Dispatcher
+from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import Text
 
 from data.config import admins
+from handlers.admin.adminCommands import mailing_text, mailing_photo, no_photo
+from handlers.admin.adminPanel import adminPanel
 from keyboards.inline.govno_kb import categories_keyboard, subcategory_keyboard, items_keyboard, item_keyboard, \
     buy_item, menu_cd
 from keyboards.keyvoard import mainMenu, kb_start_size, sizeMain
 from loader import dp, bot
+from states.Mailing import MailingService
 from states.sizeUser import start_testing, cancel_handler1, set_V, FSMClient, set_Vg, set_Vpg, set_Vb, set_Vt, \
     set_sizeL, set_email, yes_not
 
 from utils.db_api.database import Item
 
 from utils.db_api.db_commands import get_item, show_size_user, check_z, get_photo, get_name_item, get_price_item, \
-    get_decr_item, check_user, new_user
+    get_decr_item, check_user, new_user, user_all_check
+
+
+@dp.callback_query_handler(text='mailing', state=None)
+async def Mailing(call: types.CallbackQuery):  # один из пунктов админки, выдает клаву с выбором операции
+    text = call.message.text
+    for admin in admins:
+        try:
+            await call.bot.send_message(chat_id=admin, text='Введите текст рассылки')
+            await MailingService.text.set()
+
+        except Exception as err:
+            logging.exception(err)
+
+
+@dp.callback_query_handler(text='add_photo', state=MailingService.state)
+async def add_photo(call: types.CallbackQuery):
+    await call.message.answer('Пришлите фото')
+    await MailingService.photo.set()
+
+
+@dp.callback_query_handler(text='next', state=MailingService.photo)
+async def startMailing(call: types.CallbackQuery, state: FSMContext):
+    users = await user_all_check()
+    data = await state.get_data()
+    text = data.get('text')
+    photo = data.get('photo')
+    await state.finish()
+    for user in users:
+        try:
+            await call.bot.send_photo(chat_id=user.user_id, photo=photo, caption=text)
+            await sleep(0.33)
+        except Exception:
+            pass
+    await call.message.answer('Рассылка выполнена')
+
+
+@dp.callback_query_handler(text='next', state=MailingService.state)
+async def startMailing(call: types.CallbackQuery, state: FSMContext):
+    users = await user_all_check()
+    data = await state.get_data()
+    text = data.get('text')
+    await state.finish()
+    for user in users:
+        try:
+            await call.bot.send_message(chat_id=user.user_id, text=text)
+            await sleep(0.33)
+        except Exception:
+            pass
+    await call.message.answer('Рассылка выполнена')
+
+
+@dp.callback_query_handler(text="quit", state=[MailingService.text, MailingService.photo, MailingService.state])
+async def quit_m(call: types.CallbackQuery, state: FSMContext):
+    await state.finish()
+    await call.answer('Рассылка отменена')
 
 
 @dp.callback_query_handler(menu_cd.filter())
@@ -61,20 +124,25 @@ async def send_admin(call: Union[types.Message, types.CallbackQuery], callback_d
             except Exception as err:
                 logging.exception(err)
 
-
-
         await call.answer('Отправили заявку', show_alert=True)
     else:
         await call.answer('Для оформления заказа, введите личную информацию', show_alert=True)
 
 
+async def anti_flood(*args, **kwargs):
+    m = args[0]
+    await m.answer("Не флуди :)")
+
+
+@dp.message_handler(commands=['start'], state=None)
+@dp.throttled(anti_flood, rate=5)
 async def start(message: types.Message):
     await bot.send_message(message.from_user.id, "Мы в главном меню", reply_markup=mainMenu)
-    id_user=message.from_user.id
-    firstname_user=message.from_user.first_name
+    id_user = message.from_user.id
+    firstname_user = message.from_user.first_name
     lastname_user = message.from_user.last_name
 
-    check=await check_user(id_user)
+    check = await check_user(id_user)
     if check:
         pass
     else:
@@ -82,15 +150,11 @@ async def start(message: types.Message):
             try:
 
                 await bot.send_message(admin, 'Новый пользователь! \n'
-                                                  f'ID {id_user}\n'
-                                                  f'{firstname_user}')
-                await new_user(user_id=id_user,user_first_name=firstname_user,user_last_name=lastname_user)
+                                              f'ID {id_user}\n'
+                                              f'{firstname_user}')
+                await new_user(user_id=id_user, user_first_name=firstname_user, user_last_name=lastname_user)
             except Exception as err:
                 logging.exception(err)
-
-
-async def show_menu1(message: types.Message):
-    await list_categories(message)
 
 
 async def list_categories(message: Union[types.Message, types.CallbackQuery], **kwargs):
@@ -136,15 +200,17 @@ async def show_item(callback: types.CallbackQuery, category, subcategory, item_i
                 f"Цена: {price} Руб",
         reply_markup=markup)
 
-    #await callback.message.edit_text(text, reply_markup=markup)
+    # await callback.message.edit_text(text, reply_markup=markup)
 
 
-# Ловим ответ и пшем в словарь
+# проверка ID фото
 async def load_photo(message: types.Message):
     id_ph = message.photo[0].file_id
     await bot.send_message(message.from_user.id, id_ph)
 
 
+@dp.message_handler(content_types=['text'])
+@dp.throttled(anti_flood, rate=1)
 async def bot_message(message: types.Message):
     if message.text == 'Личная информация':
         user_id = message.from_user.id
@@ -183,31 +249,24 @@ async def bot_message(message: types.Message):
                                                      'https://vk.com/liioviio\n '
                                                      '\n '
                                                      'В Direct в Instagram \n '
-                                                     'https://instagram.com/liioviio?utm_medium=copy_link', reply_markup=mainMenu)
+                                                     'https://instagram.com/liioviio?utm_medium=copy_link',
+                               reply_markup=mainMenu)
     elif message.text == 'Давай познакомимся':
         await bot.send_message(message.from_user.id, 'Привет, команда LIIOVIIO на связи! \n'
                                                      '\n'
                                                      'Давай познакомимся. Мы - российский бренд, которые на протяжение 2х лет дарит девушкам комфорт и красоту🙌🏻\n '
                                                      '\n'
-                                                     'Мы создаём красивое нижнее белье в котором удобно весь день! Используем только мягкие материалы высокого качества. Отшиваем заказы для каждой из вас индивидуально по Вашим меркам🤍', reply_markup=mainMenu)
+                                                     'Мы создаём красивое нижнее белье в котором удобно весь день! Используем только мягкие материалы высокого качества. Отшиваем заказы для каждой из вас индивидуально по Вашим меркам🤍',
+                               reply_markup=mainMenu)
+    elif message.text == 'Главное меню':
+        await bot.send_message(message.from_user.id, "Мы в главном меню", reply_markup=mainMenu)
+    elif message.text == 'Каталог':
+        await list_categories(message)
 
 
-def register_handlers_menu(dp: Dispatcher):
+@dp.errors_handler(exception=BotBlocked)
+async def errors_msg(update: types.Update, exception: BotBlocked):
+    logger.exception(f'Bot blocked by user {update.message.from_user.id}')
+    return True
 
-    dp.register_message_handler(show_menu1, text="Каталог")
-    dp.register_message_handler(start, text='Главное меню')
-    dp.register_message_handler(start, commands=['start'], state=None)
-    dp.register_message_handler(start_testing, text='Ввести заново', state='*')
-    dp.register_message_handler(start_testing, text='Изменение размеров', state='*')
-    dp.register_message_handler(cancel_handler1, state="*", commands="Главное меню")
-    dp.register_message_handler(cancel_handler1, Text(equals='Главное меню', ignore_case=True), state="*")
-    dp.register_message_handler(set_V, state=FSMClient.V)
-    dp.register_message_handler(set_Vg, state=FSMClient.Vg)
-    dp.register_message_handler(set_Vpg, state=FSMClient.Vpg)
-    dp.register_message_handler(set_Vt, state=FSMClient.Vt)
-    dp.register_message_handler(set_Vb, state=FSMClient.Vb)
-    dp.register_message_handler(set_sizeL, state=FSMClient.sizeL)
-    dp.register_message_handler(set_email, state=FSMClient.email)
-    dp.register_message_handler(yes_not, state=FSMClient.check_size)
-    dp.register_message_handler(bot_message, state='*')
- #   dp.register_message_handler(load_photo, content_types=["photo"])
+
