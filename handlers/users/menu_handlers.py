@@ -5,20 +5,14 @@ from loguru import logger
 from asyncio import sleep
 from typing import Union
 
-from aiogram import types, Dispatcher
+from aiogram import types
 from aiogram.dispatcher import FSMContext
-from aiogram.dispatcher.filters import Text
-
 from data.config import admins
-from handlers.admin.adminCommands import mailing_text, mailing_photo, no_photo
-from handlers.admin.adminPanel import adminPanel
 from keyboards.inline.govno_kb import categories_keyboard, subcategory_keyboard, items_keyboard, item_keyboard, \
     buy_item, menu_cd
 from keyboards.keyvoard import mainMenu, kb_start_size, sizeMain
 from loader import dp, bot
 from states.Mailing import MailingService
-from states.sizeUser import start_testing, cancel_handler1, set_V, FSMClient, set_Vg, set_Vpg, set_Vb, set_Vt, \
-    set_sizeL, set_email, yes_not
 
 from utils.db_api.database import Item
 
@@ -262,7 +256,6 @@ async def bot_message(message: types.Message):
         await bot.send_message(message.from_user.id, "Мы в главном меню", reply_markup=mainMenu)
     elif message.text == 'Каталог':
         await list_categories(message)
-
 
 @dp.errors_handler(exception=BotBlocked)
 async def errors_msg(update: types.Update, exception: BotBlocked):

@@ -6,7 +6,7 @@ from aiogram.dispatcher.handler import CancelHandler, current_handler
 from aiogram.dispatcher.middlewares import BaseMiddleware
 from aiogram.utils.exceptions import Throttled
 
-from loader import dp
+
 
 
 def rate_limit(limit: int, key=None):

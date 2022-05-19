@@ -42,7 +42,7 @@ async def cancel_handler1(message: types.Message, state: FSMContext):
 
 
 # Начало диалога загрузки нового пункта меню
-dp.message_handler(state=FSMClient.V)
+@dp.message_handler(state=FSMClient.V)
 async def set_V(message: types.Message, state: FSMContext):
     #    await FSMClient.Vg.set()
     await FSMClient.next()

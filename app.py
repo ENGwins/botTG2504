@@ -1,7 +1,11 @@
 from aiogram import executor
+from loader import dp
+import middlewares, filters, handlers
+
+#from handlers.users import menu_handlers
 
 from utils.db_api.database import create_db1
-from loader import dp
+
 from utils.notify_admins import on_startup_notify
 from utils.set_commands import set_default_commands
 
