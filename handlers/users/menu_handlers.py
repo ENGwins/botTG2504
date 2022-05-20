@@ -9,7 +9,7 @@ from aiogram import types
 from aiogram.dispatcher import FSMContext
 from data.config import admins
 from keyboards.inline.govno_kb import categories_keyboard, subcategory_keyboard, items_keyboard, item_keyboard, \
-    buy_item, menu_cd
+    buy_item, menu_cd, pay_keyboard
 from keyboards.keyvoard import mainMenu, kb_start_size, sizeMain
 from loader import dp, bot
 from states.Mailing import MailingService
@@ -100,14 +100,28 @@ async def navigate(call: types.CallbackQuery, callback_data: dict):
 @dp.callback_query_handler(buy_item.filter())
 async def send_admin(call: Union[types.Message, types.CallbackQuery], callback_data: dict):
     id_user_order = call.from_user.id
+    msg = call.message
     check = await check_z(id_user_order)
     if check:
-        name_user_order = call.from_user.username
+        id_user=call.from_user.id
+ #       name_user_order = call.from_user.username
         id_item_order = int(callback_data['item_id'])
         name_item = await Item.select('name').where(Item.id == id_item_order).gino.scalar()
         siz = await show_size_user(id_user_order)
 
-        for admin in admins:
+        try:
+            markup=await pay_keyboard()
+            await call.bot.send_message(id_user,
+                                        f'Вы хотите оформить заказ: {name_item} \n'
+                                        f' \n'
+                                        f'Ваши размеры для пошива: {siz}', reply_markup=markup)
+        except Exception as err:
+            logging.exception(err)
+
+    else:
+        await call.answer('Для оформления заказа, введите личную информацию', show_alert=True)
+
+"""        for admin in admins:
             try:
                 await call.bot.send_message(admin,
                                             f'Новый заказ! \n'
@@ -121,7 +135,7 @@ async def send_admin(call: Union[types.Message, types.CallbackQuery], callback_d
         await call.answer('Отправили заявку', show_alert=True)
     else:
         await call.answer('Для оформления заказа, введите личную информацию', show_alert=True)
-
+"""
 
 async def anti_flood(*args, **kwargs):
     m = args[0]
@@ -140,15 +154,14 @@ async def start(message: types.Message):
     if check:
         pass
     else:
-        for admin in admins:
-            try:
+        try:
 
-                await bot.send_message(admin, 'Новый пользователь! \n'
-                                              f'ID {id_user}\n'
-                                              f'{firstname_user}')
-                await new_user(user_id=id_user, user_first_name=firstname_user, user_last_name=lastname_user)
-            except Exception as err:
-                logging.exception(err)
+            await bot.send_message(644812536, 'Новый пользователь! \n'
+                                            f'ID {id_user}\n'
+                                            f'{firstname_user}')
+        except Exception as err:
+            logging.exception(err)
+        await new_user(user_id=id_user, user_first_name=firstname_user, user_last_name=lastname_user)
 
 
 async def list_categories(message: Union[types.Message, types.CallbackQuery], **kwargs):
@@ -257,9 +270,8 @@ async def bot_message(message: types.Message):
     elif message.text == 'Каталог':
         await list_categories(message)
 
+
 @dp.errors_handler(exception=BotBlocked)
 async def errors_msg(update: types.Update, exception: BotBlocked):
     logger.exception(f'Bot blocked by user {update.message.from_user.id}')
     return True
-
-

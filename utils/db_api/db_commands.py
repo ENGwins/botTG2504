@@ -2,6 +2,7 @@ from typing import List
 
 from sqlalchemy import and_
 
+from loader import bot
 from utils.db_api.database import Item, db, Size_users, Admin
 
 
@@ -15,9 +16,10 @@ async def add_size(**kwargs):
     return newsize
 
 
-async def show_size_user(user_id) -> Size_users:
+async def show_size_user(user_id):
     all_size = await Size_users.query.where(Size_users.id_user == user_id).gino.all()
-    return all_size
+    return all_size[0]
+
 
 
 # Получение категорий

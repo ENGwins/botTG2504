@@ -6,6 +6,7 @@ load_dotenv()
 
 BOT_TOKEN=str(os.getenv('BOT_TOKEN'))
 
+YOOToken=str(os.getenv('YOOToken'))
 
 admins=[
     644812536

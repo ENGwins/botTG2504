@@ -96,3 +96,14 @@ async def item_keyboard(category, subcategory, item_id):
     )
 
     return markup
+
+
+async def pay_keyboard():
+    markup = InlineKeyboardMarkup(row_width=1)
+    markup.row(
+        InlineKeyboardButton(text='Оплатить',
+                             callback_data="pay"
+
+                             )
+    )
+    return markup
