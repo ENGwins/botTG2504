@@ -1,10 +1,11 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.callback_data import CallbackData
 
+
 from utils.db_api.db_commands import count_items, get_categories, get_subcategories, get_items
 
 menu_cd = CallbackData("show_menu1", "level", "category", "subcategory", "item_id")
-buy_item = CallbackData("buy", "item_id")
+buy_item = CallbackData("states", "item_id", 'buy')
 
 
 def make_callback_data(level, category="0", subcategory="0", item_id="0"):
@@ -14,7 +15,6 @@ def make_callback_data(level, category="0", subcategory="0", item_id="0"):
 async def categories_keyboard():
     CURRENT_LEVEL = 0
     markup = InlineKeyboardMarkup(row_width=1)
-
     categories = await get_categories()
     for category in categories:
         number_of_items = await count_items(category.category_code)  # функция подсчета товаров в категории
@@ -77,13 +77,26 @@ async def items_keyboard(category, subcategory):
     return markup
 
 
+async def pay_kb(item_id):
+    markup = InlineKeyboardMarkup(row_width=1)
+    markup.row(
+        InlineKeyboardButton(text="Продолжить", callback_data=buy_item.new(item_id=item_id, buy='buynew'))
+    )
+    markup.row(
+        InlineKeyboardButton(text="Изменить размеры", callback_data='pass')
+    )
+    markup.row(
+        InlineKeyboardButton(text="Назад", callback_data='pass')
+    )
+    return markup
+
+
 async def item_keyboard(category, subcategory, item_id):
     CURRENT_LEVEL = 3
     markup = InlineKeyboardMarkup(row_width=1)
 
     markup.row(
-        InlineKeyboardButton(text="Оформить", callback_data=buy_item.new(item_id=item_id))
-
+        InlineKeyboardButton(text="Оформить", callback_data=buy_item.new(item_id=item_id, buy='None'))
     )
 
     markup.row(
@@ -95,15 +108,4 @@ async def item_keyboard(category, subcategory, item_id):
 
     )
 
-    return markup
-
-
-async def pay_keyboard():
-    markup = InlineKeyboardMarkup(row_width=1)
-    markup.row(
-        InlineKeyboardButton(text='Оплатить',
-                             callback_data="pay"
-
-                             )
-    )
     return markup

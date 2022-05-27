@@ -1,5 +1,6 @@
 import logging
-
+import json
+from aiogram.types import ContentTypes
 from aiogram.utils.exceptions import BotBlocked
 from loguru import logger
 from asyncio import sleep
@@ -8,8 +9,9 @@ from typing import Union
 from aiogram import types
 from aiogram.dispatcher import FSMContext
 from data.config import admins
-from keyboards.inline.govno_kb import categories_keyboard, subcategory_keyboard, items_keyboard, item_keyboard, \
-    buy_item, menu_cd, pay_keyboard
+from data.message import dict_for_message_shipping, ID_PHOTO_MENU
+from keyboards.inline.govno_kb import categories_keyboard, items_keyboard, item_keyboard, \
+    buy_item, menu_cd, pay_kb, make_callback_data, subcategory_keyboard
 from keyboards.keyvoard import mainMenu, kb_start_size, sizeMain
 from loader import dp, bot
 from states.Mailing import MailingService
@@ -81,7 +83,6 @@ async def navigate(call: types.CallbackQuery, callback_data: dict):
     category = callback_data.get('category')
     subcategory = callback_data.get('subcategory')
     item_id = int(callback_data.get('item_id'))
-
     levels = {
         "0": list_categories,
         "1": list_subcategories,
@@ -100,42 +101,27 @@ async def navigate(call: types.CallbackQuery, callback_data: dict):
 @dp.callback_query_handler(buy_item.filter())
 async def send_admin(call: Union[types.Message, types.CallbackQuery], callback_data: dict):
     id_user_order = call.from_user.id
-    msg = call.message
     check = await check_z(id_user_order)
     if check:
-        id_user=call.from_user.id
- #       name_user_order = call.from_user.username
+        id_user = call.from_user.id
         id_item_order = int(callback_data['item_id'])
         name_item = await Item.select('name').where(Item.id == id_item_order).gino.scalar()
         siz = await show_size_user(id_user_order)
 
         try:
-            markup=await pay_keyboard()
+            markup = await pay_kb(id_item_order)
             await call.bot.send_message(id_user,
-                                        f'Вы хотите оформить заказ: {name_item} \n'
+                                        f'Вы хотите оформить заказ: \n{name_item} \n'
                                         f' \n'
                                         f'Ваши размеры для пошива: {siz}', reply_markup=markup)
+
+
         except Exception as err:
             logging.exception(err)
 
     else:
         await call.answer('Для оформления заказа, введите личную информацию', show_alert=True)
 
-"""        for admin in admins:
-            try:
-                await call.bot.send_message(admin,
-                                            f'Новый заказ! \n'
-                                            f'Товар №{id_item_order} - {name_item} \n'
-                                            f'Пользователь Id {id_user_order} \n'
-                                            f'Пользователь @{name_user_order}\n'
-                                            f'{siz}')
-            except Exception as err:
-                logging.exception(err)
-
-        await call.answer('Отправили заявку', show_alert=True)
-    else:
-        await call.answer('Для оформления заказа, введите личную информацию', show_alert=True)
-"""
 
 async def anti_flood(*args, **kwargs):
     m = args[0]
@@ -157,8 +143,8 @@ async def start(message: types.Message):
         try:
 
             await bot.send_message(644812536, 'Новый пользователь! \n'
-                                            f'ID {id_user}\n'
-                                            f'{firstname_user}')
+                                              f'ID {id_user}\n'
+                                              f'{firstname_user}')
         except Exception as err:
             logging.exception(err)
         await new_user(user_id=id_user, user_first_name=firstname_user, user_last_name=lastname_user)
@@ -167,12 +153,13 @@ async def start(message: types.Message):
 async def list_categories(message: Union[types.Message, types.CallbackQuery], **kwargs):
     markup = await categories_keyboard()
     if isinstance(message, types.Message):
-        await message.answer("Выберите категорию", reply_markup=markup)
+        await message.answer_photo(photo=ID_PHOTO_MENU, reply_markup=markup)
 
     elif isinstance(message, types.CallbackQuery):
         call = message
-        await call.message.edit_reply_markup(markup)
+        await bot.delete_message(message.from_user.id, message.message.message_id)
         await bot.answer_callback_query(message.id)
+        await call.message.answer_photo(photo=ID_PHOTO_MENU, reply_markup=markup)
 
 
 async def list_subcategories(callback: types.CallbackQuery, category, **kwargs):
@@ -182,15 +169,16 @@ async def list_subcategories(callback: types.CallbackQuery, category, **kwargs):
 
 
 async def list_items(callback: types.CallbackQuery, category, subcategory, **kwargs):
+    await bot.delete_message(callback.from_user.id, callback.message.message_id)
     markup = await items_keyboard(category=category, subcategory=subcategory)
     await bot.answer_callback_query(callback.id)
-    await callback.message.answer("Смотри что у нас есть", reply_markup=markup)
+    await callback.message.answer_photo(photo=ID_PHOTO_MENU, reply_markup=markup)
 
 
 async def show_item(callback: types.CallbackQuery, category, subcategory, item_id):
+    await bot.delete_message(callback.from_user.id, callback.message.message_id)
     markup = await item_keyboard(category, subcategory, item_id)
     item = await get_item(item_id)
-    text = f'{item}'
     photo_id = await get_photo(item_id)
     name = await get_name_item(item_id)
     price = await get_price_item(item_id)
@@ -211,9 +199,47 @@ async def show_item(callback: types.CallbackQuery, category, subcategory, item_i
 
 
 # проверка ID фото
+@dp.message_handler(content_types=['photo'])
 async def load_photo(message: types.Message):
     id_ph = message.photo[0].file_id
     await bot.send_message(message.from_user.id, id_ph)
+
+
+@dp.message_handler(content_types=ContentTypes.SUCCESSFUL_PAYMENT)
+async def process_pay(message: types.Message):
+    if message.successful_payment.invoice_payload == 'item 1':
+        await bot.send_message(message.from_user.id, 'Товар оплачен, статус заказа можете отследить в личном кабинете')
+        json_str = str(message.successful_payment.order_info)
+        info_order = json.loads(json_str)
+        name = info_order['name']
+        number = info_order['phone_number']
+        email = info_order['email']
+        shipping_address = info_order['shipping_address']
+        country = shipping_address['country_code']
+        state = shipping_address['state']
+        city = shipping_address['city']
+        street_line1 = shipping_address['street_line1']
+        street_line2 = shipping_address['street_line2']
+        post_code = shipping_address['post_code']
+        shipping = message.successful_payment.shipping_option_id
+        shipping_name = dict_for_message_shipping.get(shipping)
+
+        id_user_order = message.from_user.id
+        siz = await show_size_user(id_user_order)
+
+        for admin in admins:
+            try:
+                await bot.send_message(admin,
+                                       f'Новый заказ! \n'
+                                       f'----------------------------------------\n'
+                                       f' Имя: {name}\n Номер телефона: {number}\n email: {email}\n'
+                                       f'----------------------------------------\n'
+                                       f'-----Адрес доставки-----\n Доставка: {shipping_name}\n Страна: {country}\n Область: {state}\n Город: {city}\n Улица 1: {street_line1}\n Улица 2: {street_line2}\n Индекс: {post_code}\n '
+                                       f'----------------------------------------\n'
+                                       f'-----Размеры:-----\n'
+                                       f'{siz}')
+            except Exception as err:
+                logging.exception(err)
 
 
 @dp.message_handler(content_types=['text'])
