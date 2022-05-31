@@ -80,13 +80,13 @@ async def items_keyboard(category, subcategory):
 async def pay_kb(item_id):
     markup = InlineKeyboardMarkup(row_width=1)
     markup.row(
-        InlineKeyboardButton(text="Продолжить", callback_data=buy_item.new(item_id=item_id, buy='buynew'))
+        InlineKeyboardButton(text="▶ Продолжить", callback_data=buy_item.new(item_id=item_id, buy='buynew'))
     )
     markup.row(
-        InlineKeyboardButton(text="Изменить размеры", callback_data='pass')
+        InlineKeyboardButton(text="🔄 Изменить размеры", callback_data='pass')
     )
     markup.row(
-        InlineKeyboardButton(text="Назад", callback_data='pass')
+        InlineKeyboardButton(text="◀ Назад", callback_data='pass')
     )
     return markup
 

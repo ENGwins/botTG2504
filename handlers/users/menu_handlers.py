@@ -6,12 +6,14 @@ from loguru import logger
 from asyncio import sleep
 from typing import Union
 
+import emoji
+from datetime import datetime
 from aiogram import types
 from aiogram.dispatcher import FSMContext
 from data.config import admins
 from data.message import dict_for_message_shipping, ID_PHOTO_MENU
 from keyboards.inline.govno_kb import categories_keyboard, items_keyboard, item_keyboard, \
-    buy_item, menu_cd, pay_kb, make_callback_data, subcategory_keyboard
+    buy_item, menu_cd, pay_kb, subcategory_keyboard
 from keyboards.keyvoard import mainMenu, kb_start_size, sizeMain
 from loader import dp, bot
 from states.Mailing import MailingService
@@ -19,19 +21,14 @@ from states.Mailing import MailingService
 from utils.db_api.database import Item
 
 from utils.db_api.db_commands import get_item, show_size_user, check_z, get_photo, get_name_item, get_price_item, \
-    get_decr_item, check_user, new_user, user_all_check
+    get_decr_item, check_user, new_user, user_all_check, new_order
+
 
 
 @dp.callback_query_handler(text='mailing', state=None)
-async def Mailing(call: types.CallbackQuery):  # один из пунктов админки, выдает клаву с выбором операции
-    text = call.message.text
-    for admin in admins:
-        try:
-            await call.bot.send_message(chat_id=admin, text='Введите текст рассылки')
-            await MailingService.text.set()
-
-        except Exception as err:
-            logging.exception(err)
+async def Mailing(call: types.CallbackQuery):  # один из пунктов админки, выдает клаву с выбором операции=
+    await call.message.answer(text='Введите текст рассылки')
+    await MailingService.text.set()
 
 
 @dp.callback_query_handler(text='add_photo', state=MailingService.state)
@@ -120,7 +117,7 @@ async def send_admin(call: Union[types.Message, types.CallbackQuery], callback_d
             logging.exception(err)
 
     else:
-        await call.answer('Для оформления заказа, введите личную информацию', show_alert=True)
+        await call.answer('Для оформления заказа, перейдите в профиль и заполните личную информацию', show_alert=True)
 
 
 async def anti_flood(*args, **kwargs):
@@ -128,9 +125,10 @@ async def anti_flood(*args, **kwargs):
     await m.answer("Не флуди :)")
 
 
-@dp.message_handler(commands=['start'], state=None)
+@dp.message_handler(commands=['start'], state="*")
 @dp.throttled(anti_flood, rate=5)
-async def start(message: types.Message):
+async def start(message: types.Message, state: FSMContext):
+    await state.finish()
     await bot.send_message(message.from_user.id, "Мы в главном меню", reply_markup=mainMenu)
     id_user = message.from_user.id
     firstname_user = message.from_user.first_name
@@ -207,55 +205,67 @@ async def load_photo(message: types.Message):
 
 @dp.message_handler(content_types=ContentTypes.SUCCESSFUL_PAYMENT)
 async def process_pay(message: types.Message):
-    if message.successful_payment.invoice_payload == 'item 1':
-        await bot.send_message(message.from_user.id, 'Товар оплачен, статус заказа можете отследить в личном кабинете')
-        json_str = str(message.successful_payment.order_info)
-        info_order = json.loads(json_str)
-        name = info_order['name']
-        number = info_order['phone_number']
-        email = info_order['email']
-        shipping_address = info_order['shipping_address']
-        country = shipping_address['country_code']
-        state = shipping_address['state']
-        city = shipping_address['city']
-        street_line1 = shipping_address['street_line1']
-        street_line2 = shipping_address['street_line2']
-        post_code = shipping_address['post_code']
-        shipping = message.successful_payment.shipping_option_id
-        shipping_name = dict_for_message_shipping.get(shipping)
+  #  if message.successful_payment.invoice_payload == 'item 1':
+    await bot.send_message(message.from_user.id, 'Товар оплачен, вы можете добавить комментарий к заказу')
+    json_str = str(message.successful_payment.order_info)
+    info_order = json.loads(json_str)
+    name = info_order['name']
+    number = info_order['phone_number']
+    email = info_order['email']
+    shipping_address = info_order['shipping_address']
+    country = shipping_address['country_code']
+    state = shipping_address['state']
+    city = shipping_address['city']
+    street_line1 = shipping_address['street_line1']
+    street_line2 = shipping_address['street_line2']
+    post_code = shipping_address['post_code']
+    shipping = message.successful_payment.shipping_option_id
+    shipping_name = dict_for_message_shipping.get(shipping)
+    total_amount = int(message.successful_payment.total_amount)/100
+    id_user_order = message.from_user.id
+    newdate = datetime.now()
+    item_id=int(message.successful_payment.invoice_payload)
+    name_item=await get_item(item_id)
+    siz = await show_size_user(id_user_order)
+    await new_order(name=name,number=number,name_item=name_item,buyer=id_user_order,amount=total_amount,
+                    quantity=1,shipping_adress=json_str,
+                    successful=True,purchase_time=newdate,item_id=item_id,
+                    state='Заказ оплачен и оформлен, ожидается подтверждение менеджера')
 
-        id_user_order = message.from_user.id
-        siz = await show_size_user(id_user_order)
-
-        for admin in admins:
-            try:
-                await bot.send_message(admin,
-                                       f'Новый заказ! \n'
-                                       f'----------------------------------------\n'
-                                       f' Имя: {name}\n Номер телефона: {number}\n email: {email}\n'
-                                       f'----------------------------------------\n'
-                                       f'-----Адрес доставки-----\n Доставка: {shipping_name}\n Страна: {country}\n Область: {state}\n Город: {city}\n Улица 1: {street_line1}\n Улица 2: {street_line2}\n Индекс: {post_code}\n '
-                                       f'----------------------------------------\n'
-                                       f'-----Размеры:-----\n'
-                                       f'{siz}')
-            except Exception as err:
-                logging.exception(err)
-
+    for admin in admins:
+        try:
+            await bot.send_message(admin,
+                                    f'Новый заказ! \n {name_item}\n'
+                                    f'----------------------------------------\n'
+                                    f' Имя: {name}\n Номер телефона: {number}\n email: {email}\n'
+                                    f'----------------------------------------\n'
+                                    f'-----Адрес доставки-----\n Доставка: {shipping_name}\n Страна: {country}\n Область: {state}\n Город: {city}\n Улица 1: {street_line1}\n Улица 2: {street_line2}\n Индекс: {post_code}\n '
+                                    f'----------------------------------------\n'
+                                    f'-----Размеры:-----\n'
+                                    f'{siz}')
+        except Exception as err:
+            logging.exception(err)
 
 @dp.message_handler(content_types=['text'])
 @dp.throttled(anti_flood, rate=1)
 async def bot_message(message: types.Message):
-    if message.text == 'Личная информация':
+    if message.text == (emoji.emojize(':scroll:') + 'Каталог'):
+        await list_categories(message)
+
+    elif message.text == 'Назад':
+        await bot.send_message(message.from_user.id, "Мы в главном меню", reply_markup=mainMenu)
+
+    elif message.text == (emoji.emojize(':woman_frowning:') + 'Личный кабинет'):
         user_id = message.from_user.id
-        siz = await show_size_user(user_id)
         check = await check_z(user_id)
         if check:
+            siz = await show_size_user(user_id)
             await bot.send_message(message.from_user.id, f'Мои данные {siz}', reply_markup=sizeMain)
         else:
             await bot.send_message(message.from_user.id, 'Для оформления заказа необходимо указать информацию',
                                    reply_markup=kb_start_size)
 
-    elif message.text == 'Доставка':
+    elif message.text == (emoji.emojize(':rocket:') + 'Доставка'):
         await bot.send_message(message.from_user.id, 'Мы доставляем заказы по-всему Миру🙌🏻\n'
                                                      'По России:\n'
                                                      'Почта России 300₽\n '
@@ -291,10 +301,6 @@ async def bot_message(message: types.Message):
                                                      '\n'
                                                      'Мы создаём красивое нижнее белье в котором удобно весь день! Используем только мягкие материалы высокого качества. Отшиваем заказы для каждой из вас индивидуально по Вашим меркам🤍',
                                reply_markup=mainMenu)
-    elif message.text == 'Главное меню':
-        await bot.send_message(message.from_user.id, "Мы в главном меню", reply_markup=mainMenu)
-    elif message.text == 'Каталог':
-        await list_categories(message)
 
 
 @dp.errors_handler(exception=BotBlocked)

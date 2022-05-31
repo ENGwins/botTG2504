@@ -2,8 +2,7 @@ from typing import List
 
 from sqlalchemy import and_
 
-from loader import bot
-from utils.db_api.database import Item, db, Size_users, Admin
+from utils.db_api.database import Item, db, Size_users, Admin, Purchase
 
 
 async def add_item(**kwargs):
@@ -19,7 +18,6 @@ async def add_size(**kwargs):
 async def show_size_user(user_id):
     all_size = await Size_users.query.where(Size_users.id_user == user_id).gino.all()
     return all_size[0]
-
 
 
 # Получение категорий
@@ -102,3 +100,43 @@ async def check_user(user_id):  # смотрим есть ли зайпись д
 async def user_all_check():
     users = await Admin.select("user_id").gino.all()
     return users
+
+
+# Purchase________________________________________________________________
+
+async def new_order(**kwargs):
+    neworder = await Purchase(**kwargs).create()
+    return neworder
+
+
+async def search_order(id_order):
+    orders = await Purchase.query.where(Purchase.id == id_order).gino.first()
+    return orders
+
+
+async def search_order_id():
+    id_order = await Purchase.select('id').where(Purchase.finish_state == False).gino.all()
+
+    return id_order
+
+
+async def update_state(id_order, state_order):
+    order = await Purchase.query.where(Purchase.id == id_order).gino.first()
+    await order.update(state=state_order).apply()
+    return
+
+
+async def update_tracking(id_order, tracking):
+    order = await Purchase.query.where(Purchase.id == id_order).gino.first()
+    await order.update(tracking=tracking).apply()
+    return
+
+async def update_fin_state(id_order, finish_state):
+    order = await Purchase.query.where(Purchase.id == id_order).gino.first()
+    await order.update(finish_state=finish_state).apply()
+    return
+
+
+async def count_work_order():
+    count = await db.func.count(Purchase.finish_state == False).gino.scalar()
+    return count

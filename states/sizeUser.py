@@ -18,6 +18,7 @@ class FSMClient(StatesGroup):
     email = State()
     check_size = State()
 
+
 @dp.message_handler(text='Ввести заново', state='*')
 @dp.message_handler(text='Изменение размеров', state='*')
 async def start_testing(message: types.Message):
@@ -25,13 +26,12 @@ async def start_testing(message: types.Message):
     check = await check_z(user_id)
     if check:
         await delete_size(user_id)
-
     await bot.send_message(message.from_user.id, 'Следуйте подсказам', reply_markup=kb_size)
     await FSMClient.V.set()
 
 
 # Выход из состояний
-@dp.message_handler( state="*", commands="Главное меню")
+@dp.message_handler(commands="Главное меню", state="*")
 @dp.message_handler(Text(equals='Главное меню', ignore_case=True), state="*")
 async def cancel_handler1(message: types.Message, state: FSMContext):
     current_state = await state.get_state()
@@ -62,8 +62,6 @@ async def set_Vg(message: types.Message, state: FSMContext):
     await bot.send_message(message.from_user.id, 'Теперь напишите Ваш обхват под грудью')
 
 
-
-
 # Ловим второй ответ
 @dp.message_handler(state=FSMClient.Vpg)
 async def set_Vpg(message: types.Message, state: FSMContext):
@@ -84,6 +82,7 @@ async def set_Vt(message: types.Message, state: FSMContext):
     await FSMClient.next()
     await bot.send_message(message.from_user.id, 'Напишите Ваш обхват в бедрах')
 
+
 # Ловим третий ответ
 @dp.message_handler(state=FSMClient.Vb)
 async def set_Vb(message: types.Message, state: FSMContext):
@@ -91,6 +90,7 @@ async def set_Vb(message: types.Message, state: FSMContext):
         data['size_Vb'] = message.text
     await FSMClient.next()
     await bot.send_message(message.from_user.id, 'Напишите Ваш размер лифа')
+
 
 @dp.message_handler(state=FSMClient.sizeL)
 async def set_sizeL(message: types.Message, state: FSMContext):
@@ -101,6 +101,7 @@ async def set_sizeL(message: types.Message, state: FSMContext):
 
     await bot.send_message(message.from_user.id, 'Контактый email')
     await FSMClient.next()
+
 
 @dp.message_handler(state=FSMClient.email)
 async def set_email(message: types.Message, state: FSMContext):

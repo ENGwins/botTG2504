@@ -61,14 +61,35 @@ class Purchase(db.Model):
     __tablename__ = 'purchases_local'
     query: sql.Select
     id = db.Column(db.Integer, db.Sequence('user_id_seq'), primary_key=True)
+    name=db.Column(db.String(20))  # имя
+    number = db.Column(db.String(20))
+    name_item=db.Column(db.String(100))  # наименование товара
     buyer = db.Column(db.BigInteger)  # id покупателя
     item_id = db.Column(db.Integer)
     amount = db.Column(db.Integer)  # сумма покупки
     quantity = db.Column(db.Integer)  # количество товаров покупки
     purchase_time = db.Column(TIMESTAMP)  # время покупки
     shipping_adress = db.Column(JSON)  # адрес
-    phone_number = db.Column(db.String(50))
     successful = db.Column(db.Boolean, default=False)  # cтатус покупки
+    state=db.Column(db.String(200)) # Статус заказа
+    tracking=db.Column(db.String(20)) # Трек номер
+    comment=db.Column(db.String(200)) #Комментарий
+    finish_state=db.Column(db.Boolean, default=False) # готов
+    def __repr__(self):
+        return f"""
+Номер заказа: {self.id}
+Номер телефона: {self.number}
+Имя заказчика: {self.name}
+--------------------------
+Товар: {self.name_item}
+
+Время заказа: {self.purchase_time}
+
+Статус заказа: {self.state}
+
+Комментарий: {self.comment}
+Трек: {self.tracking}
+"""
 
 
 class Admin(db.Model):
