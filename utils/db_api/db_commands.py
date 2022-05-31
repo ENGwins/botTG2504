@@ -116,8 +116,9 @@ async def search_order(id_order):
 
 async def search_order_id():
     id_order = await Purchase.select('id').where(Purchase.finish_state == False).gino.all()
-
     return id_order
+
+
 
 
 async def update_state(id_order, state_order):
@@ -131,6 +132,7 @@ async def update_tracking(id_order, tracking):
     await order.update(tracking=tracking).apply()
     return
 
+
 async def update_fin_state(id_order, finish_state):
     order = await Purchase.query.where(Purchase.id == id_order).gino.first()
     await order.update(finish_state=finish_state).apply()
@@ -140,3 +142,14 @@ async def update_fin_state(id_order, finish_state):
 async def count_work_order():
     count = await db.func.count(Purchase.finish_state == False).gino.scalar()
     return count
+
+
+async def show_my_orders(id_user):
+    orders = await Purchase.query.where(Purchase.buyer == id_user).gino.all()
+    return orders
+
+
+async def add_my_comment(id_order, comment):
+    order = await Purchase.query.where(Purchase.id == id_order).gino.first()
+    await order.update(comment=comment).apply()
+    return
