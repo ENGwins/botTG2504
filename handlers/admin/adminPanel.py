@@ -2,13 +2,15 @@ from aiogram import types
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.callback_data import CallbackData
 
+from data.config import admins
+from filters import IsPrivate
 from loader import dp, bot
 from utils.db_api.db_commands import count_work_order
 
 admin_cb = CallbackData('order', 'id_order', 'admin_change', 'tracking', 'state')
 
 
-@dp.message_handler(commands=['admin'])
+@dp.message_handler(IsPrivate(),user_id=admins,commands=['admin'])
 async def adminPanel(message: types.Message):
     count = await count_work_order()
     markup = InlineKeyboardMarkup(row_width=2)
@@ -17,7 +19,7 @@ async def adminPanel(message: types.Message):
         InlineKeyboardButton(text='Изменение каталога', callback_data='change')
     )
     markup.insert(
-        InlineKeyboardButton(text=f'Не завершенные заказы - ({count})', callback_data='orders')
+        InlineKeyboardButton(text=f'Активные заказы - ({count})', callback_data='orders')
     )
 
     await bot.send_message(message.from_user.id, 'Хаю-хай, в админ панель залетай!', reply_markup=markup)

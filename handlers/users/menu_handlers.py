@@ -12,6 +12,7 @@ from aiogram import types
 from aiogram.dispatcher import FSMContext
 from data.config import admins
 from data.message import dict_for_message_shipping, ID_PHOTO_MENU
+from filters import IsPrivate
 from keyboards.inline.govno_kb import categories_keyboard, items_keyboard, item_keyboard, \
     buy_item, menu_cd, pay_kb, subcategory_keyboard
 from keyboards.inline.user import userPanel
@@ -111,6 +112,7 @@ async def send_admin(call: Union[types.Message, types.CallbackQuery], callback_d
                                         f'Вы хотите оформить заказ: \n{name_item} \n'
                                         f' \n'
                                         f'Ваши размеры для пошива: {siz}', reply_markup=markup)
+            await call.answer()
 
 
         except Exception as err:
@@ -125,11 +127,12 @@ async def anti_flood(*args, **kwargs):
     await m.answer("Не флуди :)")
 
 
-@dp.message_handler(commands=['start'], state="*")
+@dp.message_handler(IsPrivate(),commands=['start'], state="*")
 @dp.throttled(anti_flood, rate=5)
 async def start(message: types.Message, state: FSMContext):
     await state.finish()
-    await bot.send_message(message.from_user.id, "Мы в главном меню", reply_markup=mainMenu)
+    #await bot.send_photo(chat_id=message.from_user.id,photo=ID_PHOTO_MENU,caption='Добро пожаловать!', reply_markup=mainMenu)
+    await bot.send_message(message.from_user.id, 'Вы в главном меню! ', reply_markup=mainMenu)
     id_user = message.from_user.id
     firstname_user = message.from_user.first_name
     lastname_user = message.from_user.last_name
@@ -149,15 +152,17 @@ async def start(message: types.Message, state: FSMContext):
 
 
 async def list_categories(message: Union[types.Message, types.CallbackQuery], **kwargs):
+    await bot.delete_message(message.from_user.id, message.message_id)
     markup = await categories_keyboard()
     if isinstance(message, types.Message):
-        await message.answer_photo(photo=ID_PHOTO_MENU, reply_markup=markup)
+        await bot.send_photo(chat_id=message.from_user.id,photo=ID_PHOTO_MENU,caption='Выберите категорию',reply_markup=markup)
 
     elif isinstance(message, types.CallbackQuery):
         call = message
-        await bot.delete_message(message.from_user.id, message.message.message_id)
+        #await bot.delete_message(message.from_user.id, message.message.message_id)
         await bot.answer_callback_query(message.id)
-        await call.message.answer_photo(photo=ID_PHOTO_MENU, reply_markup=markup)
+        await call.message.answer_photo(photo=ID_PHOTO_MENU,caption='Вы в главном меню', reply_markup=markup)
+        #await bot.edit_message_caption(caption='Выберите категорию',reply_markup=markup)
 
 
 async def list_subcategories(callback: types.CallbackQuery, category, **kwargs):
@@ -197,13 +202,13 @@ async def show_item(callback: types.CallbackQuery, category, subcategory, item_i
 
 
 # проверка ID фото
-@dp.message_handler(content_types=['photo'])
+@dp.message_handler(IsPrivate(),content_types=['photo'])
 async def load_photo(message: types.Message):
     id_ph = message.photo[0].file_id
     await bot.send_message(message.from_user.id, id_ph)
 
 
-@dp.message_handler(content_types=ContentTypes.SUCCESSFUL_PAYMENT)
+@dp.message_handler(IsPrivate(),content_types=ContentTypes.SUCCESSFUL_PAYMENT)
 async def process_pay(message: types.Message):
     #  if message.successful_payment.invoice_payload == 'item 1':
     await bot.send_message(message.from_user.id, 'Товар оплачен, вы можете добавить комментарий к заказу')
@@ -247,7 +252,7 @@ async def process_pay(message: types.Message):
             logging.exception(err)
 
 
-@dp.message_handler(content_types=['text'])
+@dp.message_handler(IsPrivate(),content_types=['text'])
 @dp.throttled(anti_flood, rate=1)
 async def bot_message(message: types.Message):
     if message.text == (emoji.emojize(':scroll:') + 'Каталог'):
@@ -289,6 +294,7 @@ async def bot_message(message: types.Message):
                                                      'В Direct в Instagram \n '
                                                      'https://instagram.com/liioviio?utm_medium=copy_link',
                                reply_markup=mainMenu)
+
     elif message.text == 'Давай познакомимся':
         await bot.send_message(message.from_user.id, 'Привет, команда LIIOVIIO на связи! \n'
                                                      '\n'

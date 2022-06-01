@@ -9,6 +9,7 @@ from utils.set_commands import set_default_commands
 
 
 async def on_startup(dispatcher):
+    filters.setup(dispatcher)
     await on_startup_notify(dispatcher)
     await set_default_commands(dispatcher)
     await create_db1()

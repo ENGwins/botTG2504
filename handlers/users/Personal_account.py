@@ -3,12 +3,12 @@ from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters import Text
 from aiogram.types import CallbackQuery
 
+from filters import IsPrivate
 from keyboards.inline.user import user_cb, set_size, userPanel, yes_no, add_comment_kb
 from keyboards.keyvoard import kb_size, mainMenu
 from loader import dp, bot
 from states.sizeUser import FSMClient, FSMpersonal
-from utils.db_api.db_commands import check_z, show_size_user, delete_size, add_size, show_my_orders, add_my_comment, \
-    search_order
+from utils.db_api.db_commands import check_z, show_size_user, delete_size, add_size, show_my_orders, add_my_comment
 
 
 @dp.callback_query_handler(user_cb.filter(my_size='my_size_new'), state='*')
@@ -19,12 +19,11 @@ async def start_testing(message: types.Message):
         await delete_size(user_id)
     await bot.send_message(message.from_user.id, 'Следуйте подсказам')
     await set_V(message)
-    # await FSMClient.Vg.set()
 
 
 # Выход из состояний
-@dp.message_handler(commands="Главное меню", state="*")
-@dp.message_handler(Text(equals='Главное меню', ignore_case=True), state="*")
+@dp.message_handler(IsPrivate(),commands="Главное меню", state="*")
+@dp.message_handler(IsPrivate(),Text(equals='Главное меню', ignore_case=True), state="*")
 async def cancel_handler1(message: types.Message, state: FSMContext):
     current_state = await state.get_state()
     if current_state is None:
@@ -36,15 +35,13 @@ async def cancel_handler1(message: types.Message, state: FSMContext):
 # Начало диалога загрузки нового пункта меню
 # @dp.message_handler(state=FSMClient.V)
 async def set_V(message: types.Message):
-    #    await FSMClient.Vg.set()
-    # await FSMClient.next()
     await FSMClient.Vg.set()
     photoVg = 'AgACAgIAAxkBAAIVW2Jb3zfT-MVjX5lD9eQNN-TaLFGLAAIVvDEbOJjZSkGR-BcJnxPWAQADAgADcwADJAQ'
     await bot.send_photo(message.from_user.id, photoVg, caption='Напишите Ваш обхват груди')
 
 
 # Ловим ответ и пшем в словарь
-@dp.message_handler(state=FSMClient.Vg)
+@dp.message_handler(IsPrivate(),state=FSMClient.Vg)
 async def set_Vg(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['size_Vg'] = message.text
@@ -54,7 +51,7 @@ async def set_Vg(message: types.Message, state: FSMContext):
 
 
 # Ловим второй ответ
-@dp.message_handler(state=FSMClient.Vpg)
+@dp.message_handler(IsPrivate(),state=FSMClient.Vpg)
 async def set_Vpg(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['size_Vpg'] = message.text
@@ -63,7 +60,7 @@ async def set_Vpg(message: types.Message, state: FSMContext):
     await bot.send_photo(message.from_user.id, photoVb, caption='Напишите Ваш обхват в талии')
 
 
-@dp.message_handler(state=FSMClient.Vt)
+@dp.message_handler(IsPrivate(),state=FSMClient.Vt)
 async def set_Vt(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['size_Vt'] = message.text
@@ -73,7 +70,7 @@ async def set_Vt(message: types.Message, state: FSMContext):
 
 
 # Ловим третий ответ
-@dp.message_handler(state=FSMClient.Vb)
+@dp.message_handler(IsPrivate(),state=FSMClient.Vb)
 async def set_Vb(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['size_Vb'] = message.text
@@ -81,7 +78,7 @@ async def set_Vb(message: types.Message, state: FSMContext):
     await bot.send_message(message.from_user.id, 'Напишите Ваш размер лифа')
 
 
-@dp.message_handler(state=FSMClient.sizeL)
+@dp.message_handler(IsPrivate(),state=FSMClient.sizeL)
 async def set_sizeL(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['sizeL'] = message.text
@@ -92,7 +89,7 @@ async def set_sizeL(message: types.Message, state: FSMContext):
     await FSMClient.next()
 
 
-@dp.message_handler(state=FSMClient.email)
+@dp.message_handler(IsPrivate(),state=FSMClient.email)
 async def set_email(message: types.Message, state: FSMContext):
     async with state.proxy() as data:
         data['email'] = message.text
@@ -116,12 +113,12 @@ async def set_email(message: types.Message, state: FSMContext):
 
 # Четвертый ответ
 
-@dp.message_handler(state=FSMClient.check_size)
+@dp.message_handler(IsPrivate(),state=FSMClient.check_size)
 async def yes_not(message: types.Message, state: FSMContext):
     if message.text == 'Да':
         await bot.send_message(message.from_user.id, 'Информация добавлена!', reply_markup=mainMenu)
         await state.finish()
-    elif message.text == 'Ввести заново':
+    elif message.text == '🔁 Ввести заново':
         await bot.send_message(message.from_user.id, 'Удаляем запись', reply_markup=kb_size)
         user_id = message.from_user.id
         await delete_size(user_id)
@@ -174,7 +171,7 @@ async def add_comment(callback: CallbackQuery, callback_data: dict, state: FSMCo
     await FSMpersonal.one.set()
 
 
-@dp.message_handler(state=FSMpersonal.one)
+@dp.message_handler(IsPrivate(),state=FSMpersonal.one)
 async def add_comment(message: types.Message, state: FSMContext):
     id_user = message.from_user.id
     comment = message.text

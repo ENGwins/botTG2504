@@ -5,7 +5,8 @@ from aiogram.types import LabeledPrice
 from data.config import YOOToken
 from data.message import RUSSIAN_POST_SHIPPING_OPTION, PICKUP_SHIPPING_OPTION, RUSSIAN_POST_SHIPPING_OPTION_BY, \
     PICKUP_SHIPPING_OPTION_BY
-from keyboards.inline.govno_kb import buy_item
+from keyboards.inline.govno_kb import buy_item, order_comment
+from keyboards.inline.user import set_size
 from loader import bot, dp
 from utils.db_api.db_commands import get_name_item, get_price_item, get_decr_item
 
@@ -20,7 +21,7 @@ async def test_pay(call: types.CallbackQuery, callback_data: typing.Dict[str, st
 
     await bot.delete_message(call.from_user.id, call.message.message_id)
     PRICES = [LabeledPrice(label=f'{name}', amount=price)]
-
+    markup= await order_comment()
     await bot.send_invoice(chat_id=call.from_user.id,
                            title=f'{name}',
                            description=f'{decr}',
@@ -34,7 +35,7 @@ async def test_pay(call: types.CallbackQuery, callback_data: typing.Dict[str, st
                            need_phone_number=True,
                            start_parameter='test_bot',
                            prices=PRICES,
-
+                           reply_markup=markup,
                            )
 
 

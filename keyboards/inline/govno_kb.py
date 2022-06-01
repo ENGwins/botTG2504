@@ -1,7 +1,7 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.callback_data import CallbackData
 
-
+from keyboards.inline.user import user_cb
 from utils.db_api.db_commands import count_items, get_categories, get_subcategories, get_items
 
 menu_cd = CallbackData("show_menu1", "level", "category", "subcategory", "item_id")
@@ -83,7 +83,13 @@ async def pay_kb(item_id):
         InlineKeyboardButton(text="▶ Продолжить", callback_data=buy_item.new(item_id=item_id, buy='buynew'))
     )
     markup.row(
-        InlineKeyboardButton(text="🔄 Изменить размеры", callback_data='pass')
+        InlineKeyboardButton(text="🔄 Изменить размеры", callback_data=user_cb.new(id_user="None",
+                                                                                   my_size='my_size_new',
+                                                                                   my_orders='None',
+                                                                                   menu='None',
+                                                                                   comment='None',
+                                                                                   id_order='None'
+                                                                                   ))
     )
     markup.row(
         InlineKeyboardButton(text="◀ Назад", callback_data='pass')
@@ -107,5 +113,13 @@ async def item_keyboard(category, subcategory, item_id):
                              )
 
     )
+
+    return markup
+
+
+async def order_comment():
+    markup = InlineKeyboardMarkup(row_width=1)
+    markup.add(InlineKeyboardButton('💵 Оплата', pay=True))
+    markup.add(InlineKeyboardButton('📝 Добавить комментарий к заказу', callback_data='pass'))
 
     return markup
