@@ -5,7 +5,7 @@ from keyboards.inline.user import user_cb
 from utils.db_api.db_commands import count_items, get_categories, get_subcategories, get_items
 
 menu_cd = CallbackData("show_menu1", "level", "category", "subcategory", "item_id")
-buy_item = CallbackData("states", "item_id", 'buy')
+buy_item = CallbackData("buy", "item_id", 'buy')
 
 
 def make_callback_data(level, category="0", subcategory="0", item_id="0"):
@@ -77,10 +77,18 @@ async def items_keyboard(category, subcategory):
     return markup
 
 
-async def pay_kb(item_id):
+async def pay_kb(id_item):
     markup = InlineKeyboardMarkup(row_width=1)
     markup.row(
-        InlineKeyboardButton(text="▶ Продолжить", callback_data=buy_item.new(item_id=item_id, buy='buynew'))
+        InlineKeyboardButton(text="▶ Продолжить", callback_data=user_cb.new(id_user="None",
+                                                                            my_size='None',
+                                                                            my_orders='None',
+                                                                            menu='None',
+                                                                            comment='None',
+                                                                            id_order="None",
+                                                                            buy='buynew',
+                                                                            id_item=id_item
+                                                                            )),
     )
     markup.row(
         InlineKeyboardButton(text="🔄 Изменить размеры", callback_data=user_cb.new(id_user="None",
@@ -88,21 +96,30 @@ async def pay_kb(item_id):
                                                                                    my_orders='None',
                                                                                    menu='None',
                                                                                    comment='None',
-                                                                                   id_order='None'
+                                                                                   id_order='None',
+                                                                                   buy='None',
+                                                                                   id_item='None'
                                                                                    ))
     )
-    markup.row(
-        InlineKeyboardButton(text="◀ Назад", callback_data='pass')
-    )
+
+
     return markup
 
 
-async def item_keyboard(category, subcategory, item_id):
+async def item_keyboard(category, subcategory, id_item):
     CURRENT_LEVEL = 3
     markup = InlineKeyboardMarkup(row_width=1)
 
     markup.row(
-        InlineKeyboardButton(text="Оформить", callback_data=buy_item.new(item_id=item_id, buy='None'))
+        InlineKeyboardButton(text="Оформить", callback_data=user_cb.new(id_user="None",
+                                                                        my_size='None',
+                                                                        my_orders='None',
+                                                                        menu='None',
+                                                                        comment='None',
+                                                                        id_order='None',
+                                                                        buy='new',
+                                                                        id_item=id_item
+                                                                        ))
     )
 
     markup.row(
@@ -120,6 +137,17 @@ async def item_keyboard(category, subcategory, item_id):
 async def order_comment():
     markup = InlineKeyboardMarkup(row_width=1)
     markup.add(InlineKeyboardButton('💵 Оплата', pay=True))
-    markup.add(InlineKeyboardButton('📝 Добавить комментарий к заказу', callback_data='pass'))
+    markup.add(InlineKeyboardButton(text='📝 Добавить комментарий к заказу',
+                                    callback_data=user_cb.new(id_user="None",
+                                                              my_size='None',
+                                                              my_orders='None',
+                                                              menu='None',
+                                                              comment='newcomment',
+                                                              id_order='None',
+                                                              buy='None',
+                                                              id_item='None'
+                                                              )
+                                    )
+               )
 
     return markup

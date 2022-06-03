@@ -17,7 +17,7 @@ kb_start_size=ReplyKeyboardMarkup(resize_keyboard=True,one_time_keyboard=True).a
 
 bt0_1 = KeyboardButton('Давай познакомимся')
 bt0_2 = KeyboardButton(text=emoji.emojize(':scroll:')+ 'Каталог')
-bt0_3 = KeyboardButton('Как сделать заказ')
+bt0_3 = KeyboardButton('❓ Как сделать заказ')
 bt0_4 = KeyboardButton(text=emoji.emojize(':rocket:')+ 'Доставка')
 bt0_5 = KeyboardButton(text=emoji.emojize(':woman_frowning:')+ 'Личный кабинет')
 mainMenu = ReplyKeyboardMarkup(resize_keyboard=True).add(bt0_2, bt0_5, bt0_4, bt0_3).insert(bt0_1)

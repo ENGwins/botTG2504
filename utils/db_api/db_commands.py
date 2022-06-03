@@ -105,8 +105,8 @@ async def user_all_check():
 # Purchase________________________________________________________________
 
 async def new_order(**kwargs):
-    neworder = await Purchase(**kwargs).create()
-    return neworder
+    await Purchase(**kwargs).create()
+    return
 
 
 async def search_order(id_order):
@@ -117,8 +117,6 @@ async def search_order(id_order):
 async def search_order_id():
     id_order = await Purchase.select('id').where(Purchase.finish_state == False).gino.all()
     return id_order
-
-
 
 
 async def update_state(id_order, state_order):
@@ -153,3 +151,16 @@ async def add_my_comment(id_order, comment):
     order = await Purchase.query.where(Purchase.id == id_order).gino.first()
     await order.update(comment=comment).apply()
     return
+
+
+async def update_order_pay(id_order, number, amount, shipping_adress, successful, purchase_time, state):
+    order = await Purchase.query.where(Purchase.id == id_order).gino.first()
+    await order.update(number=number, amount=amount, shipping_adress=shipping_adress,
+                       successful=successful, purchase_time=purchase_time, state=state).apply()
+    return
+
+
+async def search_info_order(order_id):
+    info_order={}
+    info_order["item_id"] = await Purchase.select('item_id').where(Purchase.id == order_id).gino.first()
+    return info_order["item_id"]

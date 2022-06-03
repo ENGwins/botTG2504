@@ -7,7 +7,7 @@ from aiogram.utils.callback_data import CallbackData
 
 from loader import bot
 
-user_cb = CallbackData('user', 'id_user', 'my_size', 'my_orders', 'menu', 'comment', 'id_order')
+user_cb = CallbackData('user', 'id_user', 'my_size', 'my_orders', 'menu', 'comment', 'id_order','buy','id_item')
 
 
 async def userPanel(message: Union[types.Message, types.CallbackQuery]):
@@ -20,14 +20,18 @@ async def userPanel(message: Union[types.Message, types.CallbackQuery]):
                                                                         my_orders='None',
                                                                         menu='None',
                                                                         comment='None',
-                                                                        id_order='None'
+                                                                        id_order='None',
+                                                                        buy='None',
+                                                                        id_item='None'
                                                                         )),
         InlineKeyboardButton(text='🧾 Мои заказы', callback_data=user_cb.new(id_user=id_user,
                                                                              my_size='None',
                                                                              my_orders='my_orders',
                                                                              menu='None',
                                                                              comment='None',
-                                                                             id_order='None'
+                                                                             id_order='None',
+                                                                             buy='None',
+                                                                             id_item='None'
                                                                              )),
     )
 
@@ -42,14 +46,18 @@ async def set_size():
                                                                         my_orders='None',
                                                                         menu="back",
                                                                         comment='None',
-                                                                        id_order='None'
+                                                                        id_order='None',
+                                                                        buy='None',
+                                                                        id_item='None'
                                                                         )),
         InlineKeyboardButton(text='🔁 Ввести заново', callback_data=user_cb.new(id_user="None",
                                                                                 my_size='my_size_new',
                                                                                 my_orders='None',
                                                                                 menu='None',
                                                                                 comment='None',
-                                                                                id_order='None'
+                                                                                id_order='None',
+                                                                                buy='None',
+                                                                                id_item='None'
                                                                                 ))
     )
     return markup
@@ -63,7 +71,9 @@ async def yes_no():
                                                                              my_orders='None',
                                                                              menu="ok",
                                                                              comment='None',
-                                                                             id_order='None'
+                                                                             id_order='None',
+                                                                             buy='None',
+                                                                             id_item='None'
                                                                              )),
 
         InlineKeyboardButton(text='🔁 Ввести заново', callback_data=user_cb.new(id_user="None",
@@ -71,7 +81,9 @@ async def yes_no():
                                                                                 my_orders='None',
                                                                                 menu='None',
                                                                                 comment='None',
-                                                                                id_order='None'
+                                                                                id_order='None',
+                                                                                buy='None',
+                                                                                id_item='None'
                                                                                 ))
     )
     return markup
@@ -85,7 +97,9 @@ async def add_comment_kb(id_order):
                                                                                        my_orders='None',
                                                                                        menu="None",
                                                                                        comment='comment',
-                                                                                       id_order=id_order
+                                                                                       id_order=id_order,
+                                                                                       buy='None',
+                                                                                       id_item='None'
                                                                                        ))
     )
     return markup

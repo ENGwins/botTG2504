@@ -1,5 +1,7 @@
 import logging
 import json
+
+from aiogram.dispatcher import FSMContext
 from aiogram.types import ContentTypes
 from aiogram.utils.exceptions import BotBlocked
 from loguru import logger
@@ -9,21 +11,21 @@ from typing import Union
 import emoji
 from datetime import datetime
 from aiogram import types
-from aiogram.dispatcher import FSMContext
 from data.config import admins
 from data.message import dict_for_message_shipping, ID_PHOTO_MENU
 from filters import IsPrivate
 from keyboards.inline.govno_kb import categories_keyboard, items_keyboard, item_keyboard, \
     buy_item, menu_cd, pay_kb, subcategory_keyboard
-from keyboards.inline.user import userPanel
-from keyboards.keyvoard import mainMenu, kb_start_size, sizeMain
+from keyboards.inline.user import userPanel, user_cb
+from keyboards.keyvoard import mainMenu
 from loader import dp, bot
 from states.Mailing import MailingService
+from states.pay import FSMpay
 
 from utils.db_api.database import Item
 
 from utils.db_api.db_commands import get_item, show_size_user, check_z, get_photo, get_name_item, get_price_item, \
-    get_decr_item, check_user, new_user, user_all_check, new_order
+    get_decr_item, check_user, new_user, user_all_check, new_order, add_my_comment
 
 
 @dp.callback_query_handler(text='mailing', state=None)
@@ -96,22 +98,24 @@ async def navigate(call: types.CallbackQuery, callback_data: dict):
                                   )
 
 
-@dp.callback_query_handler(buy_item.filter())
+@dp.callback_query_handler(user_cb.filter(buy='new'))  # при нажатии на кнопку Оформить
 async def send_admin(call: Union[types.Message, types.CallbackQuery], callback_data: dict):
-    id_user_order = call.from_user.id
-    check = await check_z(id_user_order)
+    id_user = call.from_user.id
+    check = await check_z(id_user)
+
     if check:
-        id_user = call.from_user.id
-        id_item_order = int(callback_data['item_id'])
-        name_item = await Item.select('name').where(Item.id == id_item_order).gino.scalar()
-        siz = await show_size_user(id_user_order)
+
+        item_id = int(callback_data['id_item'])
+        name_item = await Item.select('name').where(Item.id == item_id).gino.scalar()
+
+        siz = await show_size_user(id_user)  # запрос размеров по id_user
 
         try:
-            markup = await pay_kb(id_item_order)
+            markup = await pay_kb(item_id)
             await call.bot.send_message(id_user,
                                         f'Вы хотите оформить заказ: \n{name_item} \n'
                                         f' \n'
-                                        f'Ваши размеры для пошива: {siz}', reply_markup=markup)
+                                        f'Ваши размеры для пошива: {siz} \n', reply_markup=markup)
             await call.answer()
 
 
@@ -127,11 +131,10 @@ async def anti_flood(*args, **kwargs):
     await m.answer("Не флуди :)")
 
 
-@dp.message_handler(IsPrivate(),commands=['start'], state="*")
+@dp.message_handler(IsPrivate(), commands=['start'], state="*")
 @dp.throttled(anti_flood, rate=5)
 async def start(message: types.Message, state: FSMContext):
     await state.finish()
-    #await bot.send_photo(chat_id=message.from_user.id,photo=ID_PHOTO_MENU,caption='Добро пожаловать!', reply_markup=mainMenu)
     await bot.send_message(message.from_user.id, 'Вы в главном меню! ', reply_markup=mainMenu)
     id_user = message.from_user.id
     firstname_user = message.from_user.first_name
@@ -152,17 +155,16 @@ async def start(message: types.Message, state: FSMContext):
 
 
 async def list_categories(message: Union[types.Message, types.CallbackQuery], **kwargs):
-    await bot.delete_message(message.from_user.id, message.message_id)
+    #await bot.delete_message(message.from_user.id, message.message_id)
     markup = await categories_keyboard()
     if isinstance(message, types.Message):
-        await bot.send_photo(chat_id=message.from_user.id,photo=ID_PHOTO_MENU,caption='Выберите категорию',reply_markup=markup)
+        await bot.send_photo(chat_id=message.from_user.id, photo=ID_PHOTO_MENU, caption='Выберите категорию',
+                             reply_markup=markup)
 
     elif isinstance(message, types.CallbackQuery):
         call = message
-        #await bot.delete_message(message.from_user.id, message.message.message_id)
         await bot.answer_callback_query(message.id)
-        await call.message.answer_photo(photo=ID_PHOTO_MENU,caption='Вы в главном меню', reply_markup=markup)
-        #await bot.edit_message_caption(caption='Выберите категорию',reply_markup=markup)
+        await call.message.answer_photo(photo=ID_PHOTO_MENU, caption='Вы в главном меню', reply_markup=markup)
 
 
 async def list_subcategories(callback: types.CallbackQuery, category, **kwargs):
@@ -181,7 +183,6 @@ async def list_items(callback: types.CallbackQuery, category, subcategory, **kwa
 async def show_item(callback: types.CallbackQuery, category, subcategory, item_id):
     await bot.delete_message(callback.from_user.id, callback.message.message_id)
     markup = await item_keyboard(category, subcategory, item_id)
-    item = await get_item(item_id)
     photo_id = await get_photo(item_id)
     name = await get_name_item(item_id)
     price = await get_price_item(item_id)
@@ -202,16 +203,22 @@ async def show_item(callback: types.CallbackQuery, category, subcategory, item_i
 
 
 # проверка ID фото
-@dp.message_handler(IsPrivate(),content_types=['photo'])
+@dp.message_handler(IsPrivate(), content_types=['photo'])
 async def load_photo(message: types.Message):
     id_ph = message.photo[0].file_id
     await bot.send_message(message.from_user.id, id_ph)
 
 
-@dp.message_handler(IsPrivate(),content_types=ContentTypes.SUCCESSFUL_PAYMENT)
-async def process_pay(message: types.Message):
-    #  if message.successful_payment.invoice_payload == 'item 1':
-    await bot.send_message(message.from_user.id, 'Товар оплачен, вы можете добавить комментарий к заказу')
+@dp.message_handler(IsPrivate(), content_types=ContentTypes.SUCCESSFUL_PAYMENT, state=FSMpay.state2)
+@dp.message_handler(IsPrivate(), content_types=ContentTypes.SUCCESSFUL_PAYMENT)
+async def process_pay(message: types.Message, state: FSMContext):
+    async with state.proxy() as data:
+        if not data:
+            com = ''
+        else:
+            com = data['comment']
+
+    await bot.send_message(message.from_user.id, 'Товар оплачен, вы можете отследить статус заказа в личном кабинете')
     json_str = str(message.successful_payment.order_info)
     info_order = json.loads(json_str)
     name = info_order['name']
@@ -219,7 +226,7 @@ async def process_pay(message: types.Message):
     email = info_order['email']
     shipping_address = info_order['shipping_address']
     country = shipping_address['country_code']
-    state = shipping_address['state']
+    states = shipping_address['state']
     city = shipping_address['city']
     street_line1 = shipping_address['street_line1']
     street_line2 = shipping_address['street_line2']
@@ -235,7 +242,9 @@ async def process_pay(message: types.Message):
     await new_order(name=name, number=number, name_item=name_item, buyer=id_user_order, amount=total_amount,
                     quantity=1, shipping_adress=json_str,
                     successful=True, purchase_time=newdate, item_id=item_id,
-                    state='Заказ оплачен и оформлен, ожидается подтверждение менеджера')
+                    state='Заказ оплачен и оформлен, ожидается подтверждение менеджером', comment=com)
+
+    await state.finish()
 
     for admin in admins:
         try:
@@ -244,18 +253,19 @@ async def process_pay(message: types.Message):
                                    f'----------------------------------------\n'
                                    f' Имя: {name}\n Номер телефона: {number}\n email: {email}\n'
                                    f'----------------------------------------\n'
-                                   f'-----Адрес доставки-----\n Доставка: {shipping_name}\n Страна: {country}\n Область: {state}\n Город: {city}\n Улица 1: {street_line1}\n Улица 2: {street_line2}\n Индекс: {post_code}\n '
+                                   f'-----Адрес доставки-----\n Доставка: {shipping_name}\n Страна: {country}\n Область: {states}\n Город: {city}\n Улица 1: {street_line1}\n Улица 2: {street_line2}\n Индекс: {post_code}\n '
                                    f'----------------------------------------\n'
                                    f'-----Размеры:-----\n'
-                                   f'{siz}')
+                                   f'{siz}\n\nКомментарий: {com}')
         except Exception as err:
             logging.exception(err)
 
 
-@dp.message_handler(IsPrivate(),content_types=['text'])
+@dp.message_handler(IsPrivate(), content_types=['text'],state="*")
 @dp.throttled(anti_flood, rate=1)
-async def bot_message(message: types.Message):
+async def bot_message(message: types.Message,state: FSMContext):
     if message.text == (emoji.emojize(':scroll:') + 'Каталог'):
+        await state.finish()
         await list_categories(message)
 
     elif message.text == 'Назад':
@@ -266,7 +276,7 @@ async def bot_message(message: types.Message):
         await userPanel(message)
 
     elif message.text == (emoji.emojize(':rocket:') + 'Доставка'):
-        await bot.send_message(message.from_user.id, 'Мы доставляем заказы по-всему Миру🙌🏻\n'
+        await bot.send_message(message.from_user.id, 'Мы доставляем заказы повсему Миру🙌🏻\n'
                                                      'По России:\n'
                                                      'Почта России 300₽\n '
                                                      'Сдэк 300₽\n'
@@ -279,15 +289,16 @@ async def bot_message(message: types.Message):
                                                      'В другие страны стоимость доставки рассчитывается индивидуально\n '
                                                      '\n'
                                                      'От 4000₽ БЕСПЛАТНАЯ доставка', reply_markup=mainMenu)
-    elif message.text == 'Как сделать заказ':
-        await bot.send_message(message.from_user.id, 'Оформить заказ вы можете в боте или в любой соцсети\n'
+    elif message.text == '❓ Как сделать заказ':
+        await bot.send_message(message.from_user.id, 'Оформить заказ Вы можете в боте или в любой соц.сети\n'
                                                      '\n'
                                                      'Как оформить заказ в боте:\n'
-                                                     '1. Внести личные данные в виде мерок;\n '
-                                                     '2. Нажать кнопку «оформить» под изделием, которое хотите заказать;\n '
-                                                     '3. В течение 5ти минут с вам свяжется администратор для оформления заказа и оплаты;\n'
+                                                     ' 1. Ввести личные данные в виде мерок\n '
+                                                     '2. При доставке СДЭК необходимо указать адрес пункта выдачи в '
+                                                     'поле "Адрес 2" либо в комментарии платежа\n '
+                                                     '3. Статус заказа отслеживается в личном кабинете\n'
                                                      '\n'
-                                                     'Или заказ можно оформить, написав:\n'
+                                                     'Также заказ можно оформить, написав:\n'
                                                      'В «сообщения сообщества» в vk\n '
                                                      'https://vk.com/liioviio\n '
                                                      '\n '
@@ -298,7 +309,7 @@ async def bot_message(message: types.Message):
     elif message.text == 'Давай познакомимся':
         await bot.send_message(message.from_user.id, 'Привет, команда LIIOVIIO на связи! \n'
                                                      '\n'
-                                                     'Давай познакомимся. Мы - российский бренд, которые на протяжение 2х лет дарит девушкам комфорт и красоту🙌🏻\n '
+                                                     'Давай познакомимся. Мы - российский бренд, который на протяжении 2х лет дарит девушкам комфорт и красоту🙌🏻\n '
                                                      '\n'
                                                      'Мы создаём красивое нижнее белье в котором удобно весь день! Используем только мягкие материалы высокого качества. Отшиваем заказы для каждой из вас индивидуально по Вашим меркам🤍',
                                reply_markup=mainMenu)
