@@ -155,16 +155,18 @@ async def start(message: types.Message, state: FSMContext):
 
 
 async def list_categories(message: Union[types.Message, types.CallbackQuery], **kwargs):
-    #await bot.delete_message(message.from_user.id, message.message_id)
+    # await bot.delete_message(message.from_user.id, message.message_id)
     markup = await categories_keyboard()
     if isinstance(message, types.Message):
         await bot.send_photo(chat_id=message.from_user.id, photo=ID_PHOTO_MENU, caption='Выберите категорию',
                              reply_markup=markup)
 
+
     elif isinstance(message, types.CallbackQuery):
         call = message
         await bot.answer_callback_query(message.id)
-        await call.message.answer_photo(photo=ID_PHOTO_MENU, caption='Вы в главном меню', reply_markup=markup)
+        await bot.edit_message_media(media=types.InputMediaPhoto(ID_PHOTO_MENU), chat_id=message.message.chat.id,
+                                     message_id=message.message.message_id, reply_markup=markup)
 
 
 async def list_subcategories(callback: types.CallbackQuery, category, **kwargs):
@@ -174,10 +176,10 @@ async def list_subcategories(callback: types.CallbackQuery, category, **kwargs):
 
 
 async def list_items(callback: types.CallbackQuery, category, subcategory, **kwargs):
-    await bot.delete_message(callback.from_user.id, callback.message.message_id)
     markup = await items_keyboard(category=category, subcategory=subcategory)
     await bot.answer_callback_query(callback.id)
-    await callback.message.answer_photo(photo=ID_PHOTO_MENU, reply_markup=markup)
+    await bot.edit_message_media(media=types.InputMediaPhoto(ID_PHOTO_MENU), chat_id=callback.message.chat.id,
+                                 message_id=callback.message.message_id, reply_markup=markup)
 
 
 async def show_item(callback: types.CallbackQuery, category, subcategory, item_id):
@@ -261,9 +263,9 @@ async def process_pay(message: types.Message, state: FSMContext):
             logging.exception(err)
 
 
-@dp.message_handler(IsPrivate(), content_types=['text'],state="*")
+@dp.message_handler(IsPrivate(), content_types=['text'], state="*")
 @dp.throttled(anti_flood, rate=1)
-async def bot_message(message: types.Message,state: FSMContext):
+async def bot_message(message: types.Message, state: FSMContext):
     if message.text == (emoji.emojize(':scroll:') + 'Каталог'):
         await state.finish()
         await list_categories(message)
