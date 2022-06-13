@@ -11,9 +11,10 @@ from typing import Union
 import emoji
 from datetime import datetime
 from aiogram import types
-from data.config import admins
+from data.config import admins, SUPER_ADMIN
 from data.message import dict_for_message_shipping, ID_PHOTO_MENU
 from filters import IsPrivate
+from handlers.admin.referral import check_referral_id
 from keyboards.inline.govno_kb import categories_keyboard, items_keyboard, item_keyboard, \
     buy_item, menu_cd, pay_kb, subcategory_keyboard
 from keyboards.inline.user import userPanel, user_cb
@@ -25,7 +26,8 @@ from states.pay import FSMpay
 from utils.db_api.database import Item
 
 from utils.db_api.db_commands import get_item, show_size_user, check_z, get_photo, get_name_item, get_price_item, \
-    get_decr_item, check_user, new_user, user_all_check, new_order, add_my_comment
+    get_decr_item, check_user, user_all_check, new_order, update_my_balans, my_balans, new_user, check_referral_order, \
+    total_amounts
 
 
 @dp.callback_query_handler(text='mailing', state=None)
@@ -123,7 +125,7 @@ async def send_admin(call: Union[types.Message, types.CallbackQuery], callback_d
             logging.exception(err)
 
     else:
-        await call.answer('Для оформления заказа, перейдите в личный кабинет и заполните информацию', show_alert=True)
+        await call.answer('Для оформления заказа, перейдите в личный кабинет и заполните мерки', show_alert=True)
 
 
 async def anti_flood(*args, **kwargs):
@@ -145,17 +147,32 @@ async def start(message: types.Message, state: FSMContext):
         pass
     else:
         try:
-
-            await bot.send_message(644812536, 'Новый пользователь! \n'
+            await bot.send_message(SUPER_ADMIN, 'Новый пользователь! \n'
                                               f'ID {id_user}\n'
                                               f'{firstname_user}')
+            start_command = message.text
+            referral_id = str(start_command[7:])
+            new_ref = await check_referral_id(referral_id, id_user)
+            await new_user(user_id=id_user, user_first_name=firstname_user, user_last_name=lastname_user,
+                           referral=new_ref)
+
+            old_balans = await my_balans(new_ref)
+            new_balans = int(50) + int(old_balans)
+
+            await update_my_balans(id_user=new_ref, new_balans=new_balans)
+
+            await bot.send_message(referral_id,
+                                   f"По вышей ссылке приглашен пользователь {message.from_user.first_name}\n"
+                                   f"Вам начислено 50 бонусов!")
+
+
+
+
         except Exception as err:
             logging.exception(err)
-        await new_user(user_id=id_user, user_first_name=firstname_user, user_last_name=lastname_user)
 
 
 async def list_categories(message: Union[types.Message, types.CallbackQuery], **kwargs):
-    # await bot.delete_message(message.from_user.id, message.message_id)
     markup = await categories_keyboard()
     if isinstance(message, types.Message):
         await bot.send_photo(chat_id=message.from_user.id, photo=ID_PHOTO_MENU, caption='Выберите категорию',
@@ -165,8 +182,8 @@ async def list_categories(message: Union[types.Message, types.CallbackQuery], **
     elif isinstance(message, types.CallbackQuery):
         call = message
         await bot.answer_callback_query(message.id)
-        await bot.edit_message_media(media=types.InputMediaPhoto(ID_PHOTO_MENU), chat_id=message.message.chat.id,
-                                     message_id=message.message.message_id, reply_markup=markup)
+        await bot.send_photo(chat_id=call.from_user.id, photo=ID_PHOTO_MENU, caption='Выберите категорию',
+                             reply_markup=markup)
 
 
 async def list_subcategories(callback: types.CallbackQuery, category, **kwargs):
@@ -183,7 +200,8 @@ async def list_items(callback: types.CallbackQuery, category, subcategory, **kwa
 
 
 async def show_item(callback: types.CallbackQuery, category, subcategory, item_id):
-    await bot.delete_message(callback.from_user.id, callback.message.message_id)
+    # await bot.delete_message(callback.from_user.id, callback.message.message_id)
+
     markup = await item_keyboard(category, subcategory, item_id)
     photo_id = await get_photo(item_id)
     name = await get_name_item(item_id)
@@ -191,17 +209,34 @@ async def show_item(callback: types.CallbackQuery, category, subcategory, item_i
     decr = await get_decr_item(item_id)
     await bot.answer_callback_query(callback.id)
 
-    await callback.message.answer_photo(
-        photo=f'{photo_id}',
-        caption=f"Наименование: {name}\n"
-                f"________________________________________\n"
-                f"Описание:"
+    await bot.edit_message_media(media=types.InputMediaPhoto(photo_id), chat_id=callback.message.chat.id,
+                                 message_id=callback.message.message_id, reply_markup=markup)
+    await bot.edit_message_caption(
+        chat_id=callback.message.chat.id, message_id=callback.message.message_id,
+        caption=f"<u>Наименование:</u> \n<b>{name}</b>\n"
+                f"\n"
+                f"<u>Описание:</u>\n"
                 f" {decr}\n"
-                f"________________________________________\n"
-                f"Цена: {price} Руб",
-        reply_markup=markup)
+                f"\n"
+                f"<u>Цена:</u>\n <b>{price} Руб</b>", parse_mode="html", reply_markup=markup
+    )
 
-    # await callback.message.edit_text(text, reply_markup=markup)
+
+"""    await callback.message.answer_photo(
+        photo=f'{photo_id}',
+        caption=f"<u>Наименование:</u> \n<b>{name}</b>\n"
+                f"\n"
+                f"<u>Описание:</u>\n"
+                f" {decr}\n"
+                f"\n"
+                f"<u>Цена:</u>\n <b>{price} Руб</b>",
+
+        parse_mode="html",
+        reply_markup=markup)
+"""
+
+
+# await callback.message.edit_text(text, reply_markup=markup)
 
 
 # проверка ID фото
@@ -211,6 +246,7 @@ async def load_photo(message: types.Message):
     await bot.send_message(message.from_user.id, id_ph)
 
 
+# Оплата прошла
 @dp.message_handler(IsPrivate(), content_types=ContentTypes.SUCCESSFUL_PAYMENT, state=FSMpay.state2)
 @dp.message_handler(IsPrivate(), content_types=ContentTypes.SUCCESSFUL_PAYMENT)
 async def process_pay(message: types.Message, state: FSMContext):
@@ -238,13 +274,35 @@ async def process_pay(message: types.Message, state: FSMContext):
     total_amount = int(message.successful_payment.total_amount) / 100
     id_user_order = message.from_user.id
     newdate = datetime.now()
-    item_id = int(message.successful_payment.invoice_payload)
+    payload = message.successful_payment.invoice_payload
+    pl = []
+    for num in payload.split(','):
+        try:
+            pl.append(int(num))
+        except ValueError:
+            pass
+    my_total = await total_amounts(id_user_order)
+    item_id = pl[0]
+    sale = int(pl[1])
+    balans = await my_balans(id_user_order)
+    new_balans = balans - sale
+    await update_my_balans(id_user_order, new_balans)  # обновить баланс
     name_item = await get_item(item_id)
     siz = await show_size_user(id_user_order)
     await new_order(name=name, number=number, name_item=name_item, buyer=id_user_order, amount=total_amount,
                     quantity=1, shipping_adress=json_str,
                     successful=True, purchase_time=newdate, item_id=item_id,
                     state='Заказ оплачен и оформлен, ожидается подтверждение менеджером', comment=com)
+    try:
+        check_ref = await check_referral_order(id_user_order)
+        check_ref = int(check_ref)
+        ref_user_balans = await my_balans(check_ref)
+        new_balans = ref_user_balans + 150
+        if check_ref != 0 and my_total == 0:
+            await update_my_balans(check_ref, new_balans)  # обновить баланс
+            await bot.send_message(check_ref, 'Ваш друг совершил первый заказ.\nВам начислено 150 бонусов!')
+    except:
+        pass
 
     await state.finish()
 
@@ -263,7 +321,7 @@ async def process_pay(message: types.Message, state: FSMContext):
             logging.exception(err)
 
 
-@dp.message_handler(IsPrivate(), content_types=['text'], state="*")
+@dp.message_handler(IsPrivate(), content_types=['text'], state=None)
 @dp.throttled(anti_flood, rate=1)
 async def bot_message(message: types.Message, state: FSMContext):
     if message.text == (emoji.emojize(':scroll:') + 'Каталог'):
@@ -274,7 +332,7 @@ async def bot_message(message: types.Message, state: FSMContext):
         await bot.send_message(message.from_user.id, "Мы в главном меню", reply_markup=mainMenu)
 
     elif message.text == (emoji.emojize(':woman_frowning:') + 'Личный кабинет'):
-        # user_id = message.from_user.id
+
         await userPanel(message)
 
     elif message.text == (emoji.emojize(':rocket:') + 'Доставка'):
@@ -308,13 +366,15 @@ async def bot_message(message: types.Message, state: FSMContext):
                                                      'https://instagram.com/liioviio?utm_medium=copy_link',
                                reply_markup=mainMenu)
 
-    elif message.text == 'Давай познакомимся':
+    elif message.text == 'О нас':
         await bot.send_message(message.from_user.id, 'Привет, команда LIIOVIIO на связи! \n'
                                                      '\n'
                                                      'Давай познакомимся. Мы - российский бренд, который на протяжении 2х лет дарит девушкам комфорт и красоту🙌🏻\n '
                                                      '\n'
                                                      'Мы создаём красивое нижнее белье в котором удобно весь день! Используем только мягкие материалы высокого качества. Отшиваем заказы для каждой из вас индивидуально по Вашим меркам🤍',
                                reply_markup=mainMenu)
+    else:
+        await message.delete()
 
 
 @dp.errors_handler(exception=BotBlocked)

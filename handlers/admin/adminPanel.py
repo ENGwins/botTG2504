@@ -16,7 +16,7 @@ async def adminPanel(message: types.Message):
     markup = InlineKeyboardMarkup(row_width=2)
     markup.row(
         InlineKeyboardButton(text='Рассылка', callback_data='mailing'),
-        InlineKeyboardButton(text='Изменение каталога', callback_data='change')
+        InlineKeyboardButton(text='Начислить бонусы', callback_data='bonus')
     )
     markup.insert(
         InlineKeyboardButton(text=f'Активные заказы - ({count})', callback_data='orders')

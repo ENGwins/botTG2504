@@ -43,7 +43,6 @@ class Size_users(db.Model):
     size_Vt = db.Column(db.String(50))
     size_Vb = db.Column(db.String(50))
     sizeL = db.Column(db.String(50))
-    email = db.Column(db.String(50))
     referral = db.Column(db.Integer)
 
     def __repr__(self):
@@ -53,7 +52,6 @@ class Size_users(db.Model):
 Обхват талии: {self.size_Vt}
 Обхват бедер: {self.size_Vb}
 Размер лифа: {self.sizeL}
-Email: {self.email}
 """
 
 
@@ -72,15 +70,16 @@ class Purchase(db.Model):
     shipping_adress = db.Column(JSON)  # адрес
     successful = db.Column(db.Boolean, default=False)  # cтатус покупки
     state=db.Column(db.String(200)) # Статус заказа
-    tracking=db.Column(db.String(20)) # Трек номер
-    comment=db.Column(db.String(200)) #Комментарий
+    tracking=db.Column(db.String(20),default='-') # Трек номер
+    comment=db.Column(db.String(200),default='') #Комментарий
     finish_state=db.Column(db.Boolean, default=False) # готов
+    gift=db.Column(db.String(100),default='')        #подарок из фортуны
     def __repr__(self):
         return f"""
 Номер заказа: {self.id}
 Номер телефона: {self.number}
 Имя заказчика: {self.name}
---------------------------
+
 Товар: {self.name_item}
 
 Время заказа: {self.purchase_time}
@@ -89,6 +88,7 @@ class Purchase(db.Model):
 
 Комментарий: {self.comment}
 Трек: {self.tracking}
+
 """
 
 
@@ -99,13 +99,16 @@ class Admin(db.Model):
     user_id = db.Column(db.BigInteger)  # id покупателя
     user_first_name = db.Column(db.String(50))
     user_last_name = db.Column(db.String(50))
+    referral=db.Column(db.String(50))
+    balans=db.Column(db.Integer,default=0)
+
 
     def __repr__(self):
         return f"""
 ID: {self.user_id}
 Имя: {self.user_first_name}
 Фамилия: {self.user_last_name}
-
+Баланс: {self.balans}
 """
 
 

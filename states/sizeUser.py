@@ -8,7 +8,7 @@ class FSMClient(StatesGroup):
     Vt = State()
     Vb = State()
     sizeL = State()
-    email = State()
+ #   email = State()
     check_size = State()
 
 

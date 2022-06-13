@@ -151,3 +151,14 @@ async def order_comment():
                )
 
     return markup
+
+
+async def bonus_kb():
+    markup = InlineKeyboardMarkup(row_width=2)
+    markup.add(InlineKeyboardButton('Да', callback_data='bonus_yes'))
+    markup.add(InlineKeyboardButton(text='Нет',
+                                    callback_data="bonus_no"
+                                    )
+               )
+
+    return markup

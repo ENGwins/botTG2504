@@ -87,9 +87,12 @@ async def check_z(user_id):  # смотрим есть ли зайпись да�
 
 
 # ADMIN________________________________________________________________
-async def new_user(**kwargs):
-    newuser = await Admin(**kwargs).create()
-    return newuser
+async def new_user(referral, **kwargs):
+    if referral != 0:
+        await Admin(referral=referral, **kwargs).create()
+    else:
+        await Admin(**kwargs).create()
+    return
 
 
 async def check_user(user_id):  # смотрим есть ли зайпись данных по Айди клиента
@@ -100,6 +103,19 @@ async def check_user(user_id):  # смотрим есть ли зайпись д
 async def user_all_check():
     users = await Admin.select("user_id").gino.all()
     return users
+
+
+async def check_referral(referral_id):
+    # count_ref = await db.func.count(Admin.referral == referral_id).gino.scalar()
+    count_ref = await db.select([db.func.count()]).where(
+        Admin.referral == referral_id
+    ).gino.scalar()
+    return count_ref
+
+
+async def check_referral_order(user_id):
+    ref = await Admin.select("referral").where(Admin.user_id == user_id).gino.scalar()
+    return ref
 
 
 # Purchase________________________________________________________________
@@ -147,6 +163,17 @@ async def show_my_orders(id_user):
     return orders
 
 
+async def my_balans(id_user):
+    balans = await Admin.select('balans').where(Admin.user_id == id_user).gino.first()
+    return balans[0]
+
+
+async def update_my_balans(id_user, new_balans):
+    balans = await Admin.query.where(Admin.user_id == id_user).gino.first()
+    await balans.update(balans=new_balans).apply()
+    return
+
+
 async def add_my_comment(id_order, comment):
     order = await Purchase.query.where(Purchase.id == id_order).gino.first()
     await order.update(comment=comment).apply()
@@ -161,6 +188,14 @@ async def update_order_pay(id_order, number, amount, shipping_adress, successful
 
 
 async def search_info_order(order_id):
-    info_order={}
+    info_order = {}
     info_order["item_id"] = await Purchase.select('item_id').where(Purchase.id == order_id).gino.first()
     return info_order["item_id"]
+
+
+async def total_amounts(id_user):  # сумма покупок пользователя
+    total_amounts = await Purchase.select('amount').where(Purchase.buyer == id_user).gino.all()
+    total = 0
+    for i in total_amounts:
+        total += i[0]
+    return total

@@ -24,3 +24,6 @@ dict_for_message_shipping = {
 }
 
 ID_PHOTO_MENU = 'AgACAgIAAxkBAAI1cWKQ2E-M2z5-uid8-57opGEB5KTYAALyvDEbTTSISB6p4fkjqyAfAQADAgADcwADJAQ'
+
+
+Name_bot='shop33rus_bot'

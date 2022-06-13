@@ -9,8 +9,11 @@ BOT_TOKEN=str(os.getenv('BOT_TOKEN'))
 YOOToken=str(os.getenv('YOOToken'))
 
 admins=[
-    644812536
+    644812536,558355680
 ]
+
+SUPER_ADMIN=644812536
+
 
 ip=os.getenv('ip')
 PGUSER=str(os.getenv('PGUSER'))

@@ -4,6 +4,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQu
 
 from filters import IsPrivate
 from handlers.admin.adminPanel import adminOrder, admin_cb, state_order
+from keyboards.inline.govno_kb import bonus_kb
 from loader import dp, bot
 from states.Mailing import MailingService
 
@@ -11,11 +12,12 @@ from states.Mailing import MailingService
 
 
 # функция рассылки сообщений
-from states.admin import admin_trak
-from utils.db_api.db_commands import search_order, update_tracking, search_order_id, update_state, update_fin_state
+from states.admin import admin_trak, admin_bonus
+from utils.db_api.db_commands import search_order, update_tracking, search_order_id, update_state, update_fin_state, \
+    update_my_balans, check_user, my_balans
 
 
-@dp.message_handler(IsPrivate(),state=MailingService.text)
+@dp.message_handler(IsPrivate(), state=MailingService.text)
 async def mailing_text(message: types.Message, state: FSMContext):
     # await bot.send_message(message.from_user.id, 'Рассылка начата!')
     answer = message.text
@@ -33,7 +35,7 @@ async def mailing_text(message: types.Message, state: FSMContext):
     await MailingService.state.set()
 
 
-@dp.message_handler(IsPrivate(),state=MailingService.photo, content_types=types.ContentTypes.PHOTO)
+@dp.message_handler(IsPrivate(), state=MailingService.photo, content_types=types.ContentTypes.PHOTO)
 async def mailing_photo(message: types.Message, state: FSMContext):
     photo_file_id = message.photo[-1].file_id  # возвращает файл id
     await state.update_data(photo=photo_file_id)
@@ -51,7 +53,7 @@ async def mailing_photo(message: types.Message, state: FSMContext):
     await message.answer_photo(photo=photo, caption=text, reply_markup=markup)
 
 
-@dp.message_handler(IsPrivate(),state=MailingService.photo)
+@dp.message_handler(IsPrivate(), state=MailingService.photo)
 async def no_photo(message: types.Message):
     markup = InlineKeyboardMarkup(row_width=2,
                                   inline_keyboard=[
@@ -68,7 +70,7 @@ async def no_photo(message: types.Message):
 @dp.callback_query_handler(text="orders")
 async def show_orders(callback: types.CallbackQuery):
     await callback.message.delete()
-    chat_id=callback.from_user.id
+    chat_id = callback.from_user.id
     id_orders = await search_order_id()
     for id_order in id_orders:
         id_or = id_order[0]
@@ -122,17 +124,78 @@ async def add_tracking(callback: CallbackQuery, callback_data: dict, state: FSMC
     await callback.message.delete()
     await callback.bot.send_message(chat_id=id_user, text=f'Введите трек номер для заказа № {id}')
     async with state.proxy() as data:
-        data['order_id']=id
+        data['order_id'] = id
     await admin_trak.one.set()
 
 
 @dp.message_handler(state=admin_trak.one)
-async def add_track(message:types.Message, state:FSMContext):
-    id_user=message.from_user.id
-    tracking=message.text
+async def add_track(message: types.Message, state: FSMContext):
+    id_user = message.from_user.id
+    tracking = message.text
     async with state.proxy() as data:
-        id_order=data['order_id']
-    await update_tracking(id_order,tracking)
-    order=await search_order(id_order)
-    await bot.send_message(chat_id=id_user,text=f"{order}")
+        id_order = data['order_id']
+    await update_tracking(id_order, tracking)
+    order = await search_order(id_order)
+    await bot.send_message(chat_id=id_user, text=f"{order}")
+    await state.finish()
+
+
+@dp.callback_query_handler(text='bonus')
+async def add_bonus(callback: CallbackQuery):
+    await admin_bonus.one.set()
+    await callback.bot.send_message(callback.from_user.id, 'Введите ID пользователя ')
+
+
+@dp.message_handler(state=admin_bonus.one)
+async def add_bonus(message: types.Message, state: FSMContext):
+    await admin_bonus.two.set()
+    await message.bot.send_message(message.from_user.id, 'Введите бонусные рубли ')
+    id_user = message.text
+    async with state.proxy() as data:
+        data['id_user'] = id_user
+
+
+@dp.message_handler(state=admin_bonus.two)
+async def add_bonus(message: types.Message, state: FSMContext):
+    markup = await bonus_kb()
+    await admin_bonus.three.set()
+    balans = message.text
+    async with state.proxy() as data:
+        data['balans'] = balans
+
+    async with state.proxy() as data:
+        id_user = data['id_user']
+
+    await message.bot.send_message(message.from_user.id, f'Начисляем ( {balans} ) бонусов \nПользователю с ID {id_user} ?',
+                                   reply_markup=markup)
+
+
+@dp.callback_query_handler(text='bonus_no', state=admin_bonus.three)
+async def add_bonus(callback: CallbackQuery, state: FSMContext):
+    id_user = callback.from_user.id
+    await callback.bot.send_message(id_user, 'Отменили')
+    await state.finish()
+
+
+@dp.callback_query_handler(text='bonus_yes', state=admin_bonus.three)
+async def add_bonus(callback: CallbackQuery, state: FSMContext):
+    try:
+        async with state.proxy() as data:
+            balans = int(data['balans'])
+            id_user = int(data['id_user'])
+
+        check=await check_user(id_user)
+        if check:
+            balans_old=int(await my_balans(id_user))
+            balans=balans_old+balans
+            if balans<0:
+                balans=0
+            await update_my_balans(id_user, balans)
+            await callback.bot.send_message(callback.from_user.id, f'Обновили!')
+            #await callback.bot.send_message(id_user,'Вам начислены бонусные рубли!')
+        else:
+            await callback.bot.send_message(callback.from_user.id, f'Пользователь не найден. Проверьте правильность введенного ID.\n'
+                                                                   f'Возможно, пользователь не пользовался ботом')
+    except ValueError:
+        await callback.bot.send_message(callback.from_user.id,'Что то пошло не так, попробуйте снова')
     await state.finish()

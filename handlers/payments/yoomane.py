@@ -11,16 +11,22 @@ from keyboards.inline.govno_kb import buy_item, order_comment
 from keyboards.inline.user import user_cb
 from loader import bot, dp
 from states.pay import FSMpay
-from utils.db_api.db_commands import get_name_item, get_price_item, get_decr_item
+from utils.db_api.db_commands import get_name_item, get_price_item, get_decr_item, my_balans
 
 
 @dp.callback_query_handler(user_cb.filter(buy='buynew'))  # при нижатии на продолжить
 async def test_pay(call: types.CallbackQuery, callback_data: typing.Dict[str, str]):
+    id_user=call.from_user.id
     callback_data_item_id = int(callback_data['id_item'])
     name = await get_name_item(callback_data_item_id)
+
+    balans = await my_balans(id_user)
     price_get = await get_price_item(callback_data_item_id)
-    price = int(price_get * 100)
+    price_balans=(int(price_get)-int(balans))
+    price = int(price_balans * 100)
     decr = await get_decr_item(callback_data_item_id)
+
+    payload=f'{callback_data_item_id}, {balans}'
 
     await bot.delete_message(call.from_user.id, call.message.message_id)
     PRICES = [LabeledPrice(label=f'{name}', amount=price)]
@@ -28,7 +34,7 @@ async def test_pay(call: types.CallbackQuery, callback_data: typing.Dict[str, st
     await bot.send_invoice(chat_id=call.from_user.id,
                            title=f'{name}',
                            description=f'{decr}',
-                           payload=f'{callback_data_item_id}',
+                           payload=payload,
                            provider_token=YOOToken,
                            currency='RUB',
                            need_email=True,
@@ -45,7 +51,6 @@ async def test_pay(call: types.CallbackQuery, callback_data: typing.Dict[str, st
 @dp.callback_query_handler(user_cb.filter(comment='newcomment'))  # при нажатии на кнопку доб коммент
 async def add_comment(callback: types.CallbackQuery):
     await callback.message.answer('Введите комментарий к заказу')
-
     await FSMpay.state1.set()
 
 
