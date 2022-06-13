@@ -66,7 +66,8 @@ class Purchase(db.Model):
     item_id = db.Column(db.Integer)
     amount = db.Column(db.Integer)  # сумма покупки
     quantity = db.Column(db.Integer)  # количество товаров покупки
-    purchase_time = db.Column(TIMESTAMP)  # время покупки
+    #purchase_time = db.Column(TIMESTAMP)  # время покупки
+    purchase_time=db.Column(db.String(50))
     shipping_adress = db.Column(JSON)  # адрес
     successful = db.Column(db.Boolean, default=False)  # cтатус покупки
     state=db.Column(db.String(200)) # Статус заказа

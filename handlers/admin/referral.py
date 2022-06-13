@@ -19,7 +19,6 @@ async def referral(callback: types.CallbackQuery):
                                                  f'<i>Кол-во приведенных друзей:</i> {count_referral}')
     await callback.answer()
 
-    #await bot.send_message(message.from_user.id,f'{total}')
 
 
 async def check_referral_id(referral_id, user_id):

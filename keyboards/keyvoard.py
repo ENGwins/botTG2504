@@ -20,7 +20,8 @@ bt0_2 = KeyboardButton(text=emoji.emojize(':scroll:')+ 'Каталог')
 bt0_3 = KeyboardButton('❓ Как сделать заказ')
 bt0_4 = KeyboardButton(text=emoji.emojize(':rocket:')+ 'Доставка')
 bt0_5 = KeyboardButton(text=emoji.emojize(':woman_frowning:')+ 'Личный кабинет')
-mainMenu = ReplyKeyboardMarkup(resize_keyboard=True).add(bt0_2, bt0_5, bt0_4, bt0_3).insert(bt0_1)
+bt0_6 = KeyboardButton(text='₽ Бонусы')
+mainMenu = ReplyKeyboardMarkup(resize_keyboard=True).row(bt0_2).insert(bt0_5).add(bt0_4,bt0_6,bt0_1).insert(bt0_3)
 
 sizeMain=ReplyKeyboardMarkup(resize_keyboard=True,one_time_keyboard=True).add(bt5_1,bt4_2)
 

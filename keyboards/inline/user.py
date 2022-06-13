@@ -35,7 +35,7 @@ async def userPanel(message: Union[types.Message, types.CallbackQuery]):
                                                                              ))
     ),
     markup.insert(
-        InlineKeyboardButton(text='💲 Получить бонусы!', callback_data=user_cb.new(id_user=id_user,
+        InlineKeyboardButton(text='₽ Получить бонусы!', callback_data=user_cb.new(id_user=id_user,
                                                                                       my_size='None',
                                                                                       my_orders='None',
                                                                                       menu='referral',
@@ -49,9 +49,10 @@ async def userPanel(message: Union[types.Message, types.CallbackQuery]):
     # await bot.send_message(message.from_user.id, '🙍‍♀️Личный кабинет', reply_markup=markup)
     user_id = message.from_user.id
     balans = await my_balans(user_id)
-    await bot.send_message(message.from_user.id, text=(f'🙍‍♀️Личный кабинет\n'
+    await bot.send_message(message.from_user.id, text=(f'🙍‍♀️Личный кабинет\n\n'
                                                        f' Мои бонусы: {balans}\n '
-                                                       f'ID для начисления бонусов `{user_id}`'), reply_markup=markup,
+                                                       f'1 бонус = 1 руб \n(списание автоматически при оформлении заказа)\n\n'
+                                                       f'ID для начисления бонусов за отзыв: `{user_id}`'), reply_markup=markup,
                            parse_mode=ParseMode.MARKDOWN)
 
 
@@ -112,7 +113,7 @@ async def yes_no():
 async def add_comment_kb(id_order):
     markup = InlineKeyboardMarkup(row_width=1)
     markup.row(
-        InlineKeyboardButton(text='📝 Добавить комментарий', callback_data=user_cb.new(id_user="None",
+        InlineKeyboardButton(text='📝 Добавить|обновить комментарий', callback_data=user_cb.new(id_user="None",
                                                                                        my_size='None',
                                                                                        my_orders='None',
                                                                                        menu="None",

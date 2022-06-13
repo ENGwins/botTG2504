@@ -16,6 +16,7 @@ from utils.db_api.db_commands import get_name_item, get_price_item, get_decr_ite
 
 @dp.callback_query_handler(user_cb.filter(buy='buynew'))  # при нижатии на продолжить
 async def test_pay(call: types.CallbackQuery, callback_data: typing.Dict[str, str]):
+    await call.answer(text='При доставке СДЭК указывайте адрес пункта выдачи',show_alert=True)
     id_user=call.from_user.id
     callback_data_item_id = int(callback_data['id_item'])
     name = await get_name_item(callback_data_item_id)

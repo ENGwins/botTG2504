@@ -273,7 +273,8 @@ async def process_pay(message: types.Message, state: FSMContext):
     shipping_name = dict_for_message_shipping.get(shipping)
     total_amount = int(message.successful_payment.total_amount) / 100
     id_user_order = message.from_user.id
-    newdate = datetime.now()
+    newdat = datetime.now()
+    newdate=str(newdat).split('.')[0]
     payload = message.successful_payment.invoice_payload
     pl = []
     for num in payload.split(','):
@@ -347,8 +348,7 @@ async def bot_message(message: types.Message, state: FSMContext):
                                                      '(4 дня доставка)\n'
                                                      '\n'
                                                      'В другие страны стоимость доставки рассчитывается индивидуально\n '
-                                                     '\n'
-                                                     'От 4000₽ БЕСПЛАТНАЯ доставка', reply_markup=mainMenu)
+                                                     , reply_markup=mainMenu)
     elif message.text == '❓ Как сделать заказ':
         await bot.send_message(message.from_user.id, 'Оформить заказ Вы можете в боте или в любой соц.сети\n'
                                                      '\n'
@@ -373,6 +373,11 @@ async def bot_message(message: types.Message, state: FSMContext):
                                                      '\n'
                                                      'Мы создаём красивое нижнее белье в котором удобно весь день! Используем только мягкие материалы высокого качества. Отшиваем заказы для каждой из вас индивидуально по Вашим меркам🤍',
                                reply_markup=mainMenu)
+    elif message.text=='₽ Бонусы':
+        await bot.send_message(message.from_user.id,'Для получения бонусов необходимо:\n'
+                                                    ' 1. Приведите друга в бота - 50 бонусов\n\n '
+                                                    '2. Ваш друг совершил заказа? Ещё 150 бонусов Ваши\n\n '
+                                                    '3. Отметь нас в stories/посте в Instagram и мы начислим 200 бонусов')
     else:
         await message.delete()
 
