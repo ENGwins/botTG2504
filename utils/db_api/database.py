@@ -2,7 +2,7 @@ import asyncio
 
 from gino import Gino
 from gino.schema import GinoSchemaVisitor
-from sqlalchemy import sql, TIMESTAMP, JSON
+from sqlalchemy import sql, JSON
 
 from data.config import POSTGRES_URI
 
@@ -10,7 +10,7 @@ db = Gino()
 
 
 class Item(db.Model):
-    __tablename__ = 'catalog2_local'
+    __tablename__ = 'catalog2'
     query: sql.Select
 
     id = db.Column(db.Integer, db.Sequence('user_id_seq'), primary_key=True)
@@ -30,7 +30,7 @@ class Item(db.Model):
 
 
 class Size_users(db.Model):
-    __tablename__ = 'Size_users_local'
+    __tablename__ = 'Size_users'
     query: sql.Select
 
     id = db.Column(db.Integer, db.Sequence('user_id_seq'), primary_key=True)
@@ -56,7 +56,7 @@ class Size_users(db.Model):
 
 
 class Purchase(db.Model):
-    __tablename__ = 'purchases_local'
+    __tablename__ = 'purchases'
     query: sql.Select
     id = db.Column(db.Integer, db.Sequence('user_id_seq'), primary_key=True)
     name=db.Column(db.String(20))  # имя
@@ -94,13 +94,13 @@ class Purchase(db.Model):
 
 
 class Admin(db.Model):
-    __tablename__ = 'forAdmin_local'
+    __tablename__ = 'forAdmin'
     query: sql.Select
     id = db.Column(db.Integer, db.Sequence('user_id_seq'), primary_key=True)
     user_id = db.Column(db.BigInteger)  # id покупателя
     user_first_name = db.Column(db.String(50))
     user_last_name = db.Column(db.String(50))
-    referral=db.Column(db.String(50))
+    referral=db.Column(db.String(50),default=0)
     balans=db.Column(db.Integer,default=0)
 
 

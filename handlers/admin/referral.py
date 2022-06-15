@@ -13,7 +13,7 @@ async def referral(callback: types.CallbackQuery):
     message = callback
     ref_link = f'https://t.me/{Name_bot}?start={message.from_user.id}'
     await bot.send_message(message.from_user.id, f'<i>Каждый приведенный друг по Вашей ссылке даст Вам</i> <u>50 бонусов!</u>\n'
-                                                 f'<i>Если друг совершил заказ, Вам начисляться еще</i> <u>150 бонусов!</u>\n\n'
+                                                 f'<i>Если друг совершил заказ, Вам начислятся еще</i> <u>150 бонусов!</u>\n\n'
                                                  f'Нажмите на ссылку, отправьте ее другу и получайте бонусы!\n\n'
                                                  f'<code>{ref_link}</code>\n\n '
                                                  f'<i>Кол-во приведенных друзей:</i> {count_referral}')
