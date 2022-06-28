@@ -2,40 +2,106 @@ import typing
 from aiogram import types
 from aiogram.dispatcher import FSMContext
 from aiogram.types import LabeledPrice
+from sqlalchemy import and_
 
 from data.config import YOOToken
 from data.message import RUSSIAN_POST_SHIPPING_OPTION, PICKUP_SHIPPING_OPTION, RUSSIAN_POST_SHIPPING_OPTION_BY, \
     PICKUP_SHIPPING_OPTION_BY
 from filters import IsPrivate
-from keyboards.inline.govno_kb import buy_item, order_comment
+from keyboards.inline.govno_kb import order_comment
 from keyboards.inline.user import user_cb
 from loader import bot, dp
 from states.pay import FSMpay
-from utils.db_api.db_commands import get_name_item, get_price_item, get_decr_item, my_balans
+from utils.db_api.database import Basket
+from utils.db_api.db_commands import get_name_item, get_price_item, get_decr_item, my_balans, show_basket
 
 
 @dp.callback_query_handler(user_cb.filter(buy='buynew'))  # при нижатии на продолжить
 async def test_pay(call: types.CallbackQuery, callback_data: typing.Dict[str, str]):
-    await call.answer(text='При доставке СДЭК указывайте адрес пункта выдачи',show_alert=True)
-    id_user=call.from_user.id
-    callback_data_item_id = int(callback_data['id_item'])
-    name = await get_name_item(callback_data_item_id)
+    global item, quantity, item_id, name
+    PRICES = []
+    pl = {}
+    callback_data_item = []
+    sum_amount = 0
+    total_balans = 0
+    await call.answer(text='При доставке СДЭК указывайте адрес пункта выдачи', show_alert=True)
+    id_user = call.from_user.id
+    item_id_orders = await show_basket(id_user)
 
-    balans = await my_balans(id_user)
-    price_get = await get_price_item(callback_data_item_id)
-    price_balans=(int(price_get)-int(balans))
-    price = int(price_balans * 100)
-    decr = await get_decr_item(callback_data_item_id)
+    for item_in_order in item_id_orders[1]:
+        item_id = item_in_order[0]
+        price_get = int(await get_price_item(item_id)) * 100
+        quantity = int(await Basket.select('quantity').where(
+            and_(Basket.user_id == id_user, Basket.item_id == item_id)).gino.scalar())
+        sum_amount += price_get * quantity
 
-    payload=f'{callback_data_item_id}, {balans}'
+    if sum_amount > 299900:
+        balans = int(await my_balans(id_user) * 100)
+        old_balans = balans
 
+        for item_in_order in item_id_orders[1]:
+            item_id = item_in_order[0]
+            name = await get_name_item(item_id)
+            price_get = int(await get_price_item(item_id)) * 100
+            quantity = int(await Basket.select('quantity').where(
+                and_(Basket.user_id == id_user, Basket.item_id == item_id)).gino.scalar())
+
+            quantity_t = quantity
+            while not quantity_t == 0:
+                if old_balans > 100:
+                    sale_one_item_2 = price_get / 2
+                    if balans > sale_one_item_2:
+                        sale_one_item = int(price_get / 2)
+                    else:
+                        sale_one_item = balans
+                    price_sale = int(price_get - sale_one_item)
+                    old_balans = int(old_balans - sale_one_item)
+                    item = [item_id, name, price_sale, quantity]
+                    callback_data_item.append(item)
+                    pl[item_id] = [quantity]
+                    quantity_t -= 1
+                    total_balans += sale_one_item
+                else:
+                    item = [item_id, name, price_get, quantity]
+                    callback_data_item.append(item)
+                    pl[item_id] = [quantity]
+                    quantity_t -= 1
+
+    else:
+        for item_in_order in item_id_orders[1]:
+            item_id = item_in_order[0]
+            quantity = int(await Basket.select('quantity').where(
+                and_(Basket.user_id == id_user, Basket.item_id == item_id)).gino.scalar())
+            name = await get_name_item(item_id)
+            price_get = int(await get_price_item(item_id)) * 100
+            item = [item_id, name, price_get, quantity]
+            quantity_t = quantity
+            while not quantity_t == 0:
+                quantity_t -= 1
+                item = [item_id, name, price_get, quantity]
+                callback_data_item.append(item)
+                pl[item_id] = [quantity]
+
+        total_balans = 0
+    new_balans = int(int(await my_balans(id_user)) - (int(total_balans)))
+
+
+    pl[id_user] = [new_balans]
+    for i in callback_data_item:
+        PRICES.append(types.LabeledPrice(label=i[1], amount=i[2]))
+        name = i[1]
+
+    if len(PRICES) > 1:
+        name = 'Комплекты'
+        decr = '-'
+    else:
+        decr = await get_decr_item(item_id)
     await bot.delete_message(call.from_user.id, call.message.message_id)
-    PRICES = [LabeledPrice(label=f'{name}', amount=price)]
     markup = await order_comment()
     await bot.send_invoice(chat_id=call.from_user.id,
                            title=f'{name}',
                            description=f'{decr}',
-                           payload=payload,
+                           payload=pl,
                            provider_token=YOOToken,
                            currency='RUB',
                            need_email=True,
@@ -46,6 +112,7 @@ async def test_pay(call: types.CallbackQuery, callback_data: typing.Dict[str, st
                            start_parameter='test_bot',
                            prices=PRICES,
                            reply_markup=markup,
+                           max_tip_amount=1000000,
                            )
 
 
@@ -97,3 +164,22 @@ async def process_pre_checkout_query(pre_checkout_query: types.PreCheckoutQuery,
     await bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
 
     # await FSMpay.state4.set()
+
+
+"""
+    if int(price_get) > 2999:
+        price_2 = int(price_get / 2)
+        balans= await my_balans(id_user)
+
+        if balans>price_2:
+            balans=price_2
+            price_balans = (int(price_get) - int(balans))
+            price = int(price_balans * 100)
+        else:
+            price_balans = (int(price_get) - int(balans))
+            price = int(price_balans * 100)
+            balans=price_2
+
+    else:
+        price = int(price_get * 100)
+        balans=0"""

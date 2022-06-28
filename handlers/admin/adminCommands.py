@@ -1,3 +1,5 @@
+import json
+
 from aiogram import types
 from aiogram.dispatcher import FSMContext
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
@@ -14,7 +16,8 @@ from states.Mailing import MailingService
 # функция рассылки сообщений
 from states.admin import admin_trak, admin_bonus
 from utils.db_api.db_commands import search_order, update_tracking, search_order_id, update_state, update_fin_state, \
-    update_my_balans, check_user, my_balans
+    update_my_balans, check_user, my_balans, \
+    search_com_qua_order
 
 
 @dp.message_handler(IsPrivate(), state=MailingService.text)
@@ -70,20 +73,28 @@ async def no_photo(message: types.Message):
 @dp.callback_query_handler(text="orders")
 async def show_orders(callback: types.CallbackQuery):
     await callback.message.delete()
-    chat_id = callback.from_user.id
     id_orders = await search_order_id()
     for id_order in id_orders:
         id_or = id_order[0]
-        order = await search_order(id_or)
         markup = await adminOrder(id_or)
-        await callback.bot.send_message(chat_id=chat_id, text=f"{order}", reply_markup=markup)
+        item,name,number,state,tracking,com,qua=await search_com_qua_order(id_or)
+        await bot.send_message(callback.from_user.id,text=f'Заказ № {id_or}\n\n'
+                                                          f'<u>Наименование</u> -  <b>{item} - {qua} шт</b> \n\n'
+                                                          f'<u>Комментарий</u> {com}\n\n'
+                                                          f'<u>Статус заказа</u> - {state}\n'
+                                                          f'<u>Трек номер</u> - <code>{tracking}</code> \n\n'
+                                                          f'Имя {name}\n'
+                                                          f'Номер телефона {number}\n',parse_mode='html',reply_markup=markup)
+
 
 
 @dp.callback_query_handler(admin_cb.filter(admin_change="admin_change"))
 async def add_tracking(callback: CallbackQuery, callback_data: dict):
-    id_order = callback_data['id_order']
+    id_order = int(callback_data['id_order'])
     markup = await state_order(id_order)
-    await callback.message.answer(text=f'Выберите статус заказа №{id_order}', reply_markup=markup)
+    item,name,number,state,tracking,com,qua=await search_com_qua_order(id_order)
+    await callback.message.answer(text=f'Выберите статус заказа № {id_order}\n\n'
+                                       f'Текущий статус {state}', reply_markup=markup)
 
 
 @dp.callback_query_handler(admin_cb.filter(state='state1'))
@@ -105,6 +116,15 @@ async def state1(callback: CallbackQuery, callback_data: dict):
     await callback.answer('Обновлено')
     await callback.message.delete()
 
+@dp.callback_query_handler(admin_cb.filter(state='state3'))
+async def state3(callback: CallbackQuery, callback_data: dict):
+    id_order = int(callback_data['id_order'])
+    item,name,number,state,tracking,com,qua=await search_com_qua_order(id_order)
+    state_order = f'Ваш заказ отправлен! Трек номер {tracking}'
+    await update_state(id_order, state_order)
+    await callback.answer('Обновлено')
+    await callback.message.delete()
+
 
 @dp.callback_query_handler(admin_cb.filter(state='state4'))
 async def state1(callback: CallbackQuery, callback_data: dict):
@@ -120,9 +140,10 @@ async def state1(callback: CallbackQuery, callback_data: dict):
 async def add_tracking(callback: CallbackQuery, callback_data: dict, state: FSMContext):
     id_order = callback_data['id_order']
     id = int(id_order)
-    id_user = callback.from_user.id
     await callback.message.delete()
-    await callback.bot.send_message(chat_id=id_user, text=f'Введите трек номер для заказа № {id}')
+    #markup=await state_order(id)
+    await callback.bot.send_message(chat_id=callback.from_user.id, text=f'Введите трек номер для заказа № {id}')
+    #await callback.bot.send_message(chat_id=callback.from_user.id,text='Выберите статус закза ',reply_markup=markup)
     async with state.proxy() as data:
         data['order_id'] = id
     await admin_trak.one.set()
@@ -136,7 +157,7 @@ async def add_track(message: types.Message, state: FSMContext):
         id_order = data['order_id']
     await update_tracking(id_order, tracking)
     order = await search_order(id_order)
-    await bot.send_message(chat_id=id_user, text=f"{order}")
+    await bot.send_message(chat_id=id_user, text=f"Для заказа № {order} обновлен трек номер {tracking}")
     await state.finish()
 
 

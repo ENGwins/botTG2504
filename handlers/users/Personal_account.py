@@ -10,7 +10,8 @@ from keyboards.inline.user import user_cb, set_size, userPanel, yes_no, add_comm
 from keyboards.keyvoard import kb_size, mainMenu
 from loader import dp, bot
 from states.sizeUser import FSMClient, FSMpersonal
-from utils.db_api.db_commands import check_z, show_size_user, delete_size, add_size, show_my_orders, add_my_comment
+from utils.db_api.db_commands import check_z, show_size_user, delete_size, add_size, show_my_orders, add_my_comment, \
+    search_com_qua_order
 
 
 @dp.callback_query_handler(user_cb.filter(my_size='my_size_new'), state='*')
@@ -174,7 +175,15 @@ async def my_orders(callback: CallbackQuery, callback_data: dict, state: FSMCont
     for order in orders:
         id_order = order.id
         markup = await add_comment_kb(id_order)
-        await callback.bot.send_message(chat_id=user_id, text=f'Ваш заказ: \n {order}', reply_markup=markup)
+        item, name, number, state, tracking, com, qua = await search_com_qua_order(id_order)
+        await callback.bot.send_message(callback.from_user.id, text=f'Заказ № {id_order}\n\n'
+                                                           f'<u>Наименование</u> -  <b>{item} - {qua} шт</b> \n\n'
+                                                           f'<u>Комментарий</u> {com}\n\n'
+                                                           f'<u>Статус заказа</u> - {state}\n'
+                                                           f'<u>Трек номер</u> - <code>{tracking}</code> \n\n'
+                                                           f'Имя {name}\n'
+                                                           f'Номер телефона {number}\n', parse_mode='html',
+                               reply_markup=markup)
 
 
 @dp.callback_query_handler(user_cb.filter(comment='comment'))

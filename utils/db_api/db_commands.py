@@ -1,8 +1,8 @@
+
 from typing import List
 
-from sqlalchemy import and_
-
-from utils.db_api.database import Item, db, Size_users, Admin, Purchase
+from sqlalchemy import and_, or_
+from utils.db_api.database import Item, db, Size_users, Admin, Purchase, Basket
 
 
 async def add_item(**kwargs):
@@ -131,7 +131,8 @@ async def search_order(id_order):
 
 
 async def search_order_id():
-    id_order = await Purchase.select('id').where(Purchase.finish_state == False).gino.all()
+    id_order = await Purchase.select('id').where(
+        and_(Purchase.finish_state == False, Purchase.successful == True)).gino.all()
     return id_order
 
 
@@ -154,18 +155,19 @@ async def update_fin_state(id_order, finish_state):
 
 
 async def count_work_order():
-    count = await db.func.count(Purchase.finish_state == False).gino.scalar()
+    temp = await Purchase.query.where(and_(Purchase.finish_state == False, Purchase.successful == True)).gino.all()
+    count = len(temp)
     return count
 
 
 async def show_my_orders(id_user):
-    orders = await Purchase.query.where(Purchase.buyer == id_user).gino.all()
+    orders = await Purchase.query.where(Purchase.buyer == id_user).where(Purchase.successful == True).gino.all()
     return orders
 
 
 async def my_balans(id_user):
-    balans = await Admin.select('balans').where(Admin.user_id == id_user).gino.first()
-    return balans[0]
+    balans = await Admin.select('balans').where(Admin.user_id == id_user).gino.scalar()
+    return balans
 
 
 async def update_my_balans(id_user, new_balans):
@@ -199,3 +201,119 @@ async def total_amounts(id_user):  # сумма покупок пользова�
     for i in total_amounts:
         total += i[0]
     return total
+
+
+"""async def search_json(id_order):
+    json_str = await Purchase.select('shipping_adress').where(Purchase.id == id_order)
+
+    #json_encoder=json.dumps(json_str.__dict__)
+    return json_str
+"""
+async def search_com_qua_order(id_order):
+    item = await Purchase.select('name_item').where(Purchase.id == id_order).gino.scalar()
+    com = await Purchase.select('comment').where(Purchase.id == id_order).gino.scalar()
+    name = await Purchase.select('name').where(Purchase.id == id_order).gino.scalar()
+    number = await Purchase.select('number').where(Purchase.id == id_order).gino.scalar()
+    state = await Purchase.select('state').where(Purchase.id == id_order).gino.scalar()
+    tracking = await Purchase.select('tracking').where(Purchase.id == id_order).gino.scalar()
+    qua = await Purchase.select('quantity').where(Purchase.id == id_order).gino.scalar()
+    return item,name,number,state,tracking,com,qua
+
+
+
+"""
+       =============== basket =========================
+"""
+
+
+async def total_amount_basket(user_id):  # cумма в корзине
+    totalo = []
+    total = 0
+    id_all = await Basket.select('id').where(
+        Basket.user_id == user_id).gino.all()
+    for id in id_all:
+        quantity = await Basket.select('quantity').where(
+            and_(Basket.id == int(id[0]), Basket.user_id == user_id)).gino.scalar()
+        amount = await Basket.select('amount').where(
+            and_(Basket.id == int(id[0]), Basket.user_id == user_id)).gino.scalar()
+        sum = int(quantity) * int(amount)
+        totalo.append(sum)
+    for i in totalo:
+        total += i
+    return total
+
+
+async def add_item_basket(user_id, item_id, amount, **kwargs):
+    newitem = await Basket(user_id=user_id, item_id=item_id, amount=amount, **kwargs).create()
+    return newitem
+
+
+async def chek_basket(user_id, item_id):
+    check = await db.scalar(
+        db.exists(Basket.query.where(and_(Basket.user_id == user_id, Basket.item_id == item_id))).select())
+    return check
+
+
+async def update_quantity(user_id, item_id, quantity):
+    old_quantity = await Basket.select('quantity').where(
+        and_(Basket.user_id == user_id, Basket.item_id == item_id)).gino.scalar()
+    old_q = int(old_quantity) + int(quantity)
+
+    if old_q < 1:
+        dell = await Basket.query.where(and_(Basket.user_id == user_id, Basket.item_id == item_id)).gino.first()
+        await dell.delete()
+    else:
+        new_quantity = await Basket.query.where(and_(Basket.user_id == user_id, Basket.item_id == item_id)).gino.first()
+        await new_quantity.update(quantity=old_q).apply()
+    return
+
+
+async def count_item_basket(user_id, item_id):
+    temp = await Basket.select('quantity').where(
+        and_(Basket.user_id == user_id, Basket.item_id == item_id)).gino.scalar()
+    count = temp
+    return count
+
+
+async def show_basket(user_id):
+    id_item_id = []
+    id_all = await Basket.select('id').where(
+        Basket.user_id == user_id).gino.all()
+    item_id = await Basket.select('item_id').where(
+        Basket.user_id == user_id).gino.all()
+    id_item_id.append(id_all)
+    id_item_id.append(item_id)
+    return id_item_id
+
+
+async def count_basket(user_id):
+    all = await Basket.select('id').where(
+        Basket.user_id == user_id).gino.all()
+    return all
+
+
+async def delete_basket(user_id):
+    dell = await Basket.query.where(Basket.user_id == user_id).gino.all()
+    for i in dell:
+        await i.delete()
+
+
+"""    for id in id_all:
+        quantity = await Basket.select('quantity').where(
+            and_(Basket.id == int(id[0]), Basket.user_id == user_id)).gino.scalar()
+        amount = await Basket.select('amount').where(
+            and_(Basket.id == int(id[0]), Basket.user_id == user_id)).gino.scalar()
+    return f'Количество: {quantity}\n Цена: {amount}'"""
+
+
+async def chek_photos(item_id):
+    photo = await Item.select("photo").where(Item.id == item_id).gino.scalar()
+    photo2 = await Item.select("photo2").where(Item.id == item_id).gino.scalar()
+    photo3 = await Item.select("photo3").where(Item.id == item_id).gino.scalar()
+    photo4 = await Item.select("photo4").where(Item.id == item_id).gino.scalar()
+    photo = [photo, photo2, photo3, photo4]
+    photo_id_all = []
+    for id in photo:
+        if id != '0':
+            photo_id_all.append(id)
+    return photo_id_all

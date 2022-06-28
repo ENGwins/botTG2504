@@ -8,6 +8,7 @@ BOT_TOKEN=str(os.getenv('BOT_TOKEN'))
 
 YOOToken=str(os.getenv('YOOToken'))
 
+
 admins=[
     644812536,558355680
 ]
@@ -20,6 +21,8 @@ PGUSER=str(os.getenv('PGUSER'))
 PGPASSWD=str(os.getenv('PGPASSWD'))
 DATABASE=str(os.getenv('DATABASE'))
 
-#558355680
 
 POSTGRES_URI=f'postgresql://{PGUSER}:{PGPASSWD}@{ip}/{DATABASE}'
+
+
+#,558355680

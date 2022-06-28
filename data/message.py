@@ -23,7 +23,7 @@ dict_for_message_shipping = {
     'sdec_by': 'СДЭК'
 }
 
-ID_PHOTO_MENU = 'AgACAgIAAxkBAAI1cWKQ2E-M2z5-uid8-57opGEB5KTYAALyvDEbTTSISB6p4fkjqyAfAQADAgADcwADJAQ'
 
 
-Name_bot='shop33rus_bot'
+ID_PHOTO_MENU = 'AgACAgIAAxkBAAIFFmKp0admQB74cEZtSeAiGeGE8-iUAAIBvzEbCWxRSTh2UbC4XVycAQADAgADcwADJAQ'
+Name_bot='liioviio_bot'
