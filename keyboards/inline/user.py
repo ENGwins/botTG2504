@@ -44,7 +44,19 @@ async def userPanel(message: Union[types.Message, types.CallbackQuery]):
                                                                                   buy='None',
                                                                                   id_item='None'
                                                                                   ))
-    )
+    )\
+        #,
+   # markup.insert(
+    #    InlineKeyboardButton(text='Фортуна', callback_data=user_cb.new(id_user=id_user,
+   #                                                                    my_size='None',
+   #                                                                    my_orders='None',
+    #                                                                   menu='fortuna',
+    #                                                                   comment='None',
+    #                                                                   id_order='None',
+    #                                                                   buy='None',
+    #                                                                   id_item='None'
+     #                                                                  ))
+   # )
 
     # await bot.send_message(message.from_user.id, '🙍‍♀️Личный кабинет', reply_markup=markup)
     user_id = message.from_user.id
@@ -150,6 +162,15 @@ async def size_next(lvl):
                                                     buy='None',
                                                     id_item='None')
         )
+
+    )
+    return markup
+
+
+async def fortuna_kb():
+    markup = InlineKeyboardMarkup(row_width=1)
+    markup.row(
+        InlineKeyboardButton(text='Крутить! ', callback_data='go')
 
     )
     return markup

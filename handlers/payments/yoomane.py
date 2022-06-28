@@ -83,17 +83,18 @@ async def test_pay(call: types.CallbackQuery, callback_data: typing.Dict[str, st
                 pl[item_id] = [quantity]
 
         total_balans = 0
-    new_balans = int(int(await my_balans(id_user)) - (int(total_balans)))
-
-
+    new_balans = int(int(await my_balans(id_user)) - ((int(total_balans))/100))
+    name_coll=[]
     pl[id_user] = [new_balans]
     for i in callback_data_item:
         PRICES.append(types.LabeledPrice(label=i[1], amount=i[2]))
+        name_coll.append(i[1])
         name = i[1]
 
     if len(PRICES) > 1:
         name = 'Комплекты'
-        decr = '-'
+        collect='| '.join(name_coll)
+        decr = collect
     else:
         decr = await get_decr_item(item_id)
     await bot.delete_message(call.from_user.id, call.message.message_id)
