@@ -2,7 +2,7 @@ import asyncio
 
 from gino import Gino
 from gino.schema import GinoSchemaVisitor
-from sqlalchemy import sql, TIMESTAMP, JSON
+from sqlalchemy import sql, JSON
 
 from data.config import POSTGRES_URI
 
@@ -27,9 +27,6 @@ class Item(db.Model):
     photo = db.Column(db.String(250))
     price = db.Column(db.Integer)
     decription = db.Column(db.String)
-    photo2= db.Column(db.String(250))
-    photo3 = db.Column(db.String(250))
-    photo4 = db.Column(db.String(250))
 
 
 class Size_users(db.Model):
@@ -62,30 +59,24 @@ class Purchase(db.Model):
     __tablename__ = 'purchases'
     query: sql.Select
     id = db.Column(db.Integer, db.Sequence('user_id_seq'), primary_key=True)
-    name = db.Column(db.String(20))  # имя
+    name=db.Column(db.String(20))  # имя
     number = db.Column(db.String(20))
-    name_item = db.Column(db.String(100))  # наименование товара
+    name_item=db.Column(db.String(100))  # наименование товара
     buyer = db.Column(db.BigInteger)  # id покупателя
     item_id = db.Column(db.Integer)
     amount = db.Column(db.Integer)  # сумма покупки
     quantity = db.Column(db.Integer)  # количество товаров покупки
-    # purchase_time = db.Column(TIMESTAMP)  # время покупки
-    purchase_time = db.Column(db.String(50))
+    #purchase_time = db.Column(TIMESTAMP)  # время покупки
+    purchase_time=db.Column(db.String(50))
     shipping_adress = db.Column(JSON)  # адрес
     successful = db.Column(db.Boolean, default=False)  # cтатус покупки
-    state = db.Column(db.String(200))  # Статус заказа
-    tracking = db.Column(db.String(20), default='-')  # Трек номер
-    comment = db.Column(db.String(200), default='')  # Комментарий
-    finish_state = db.Column(db.Boolean, default=False)  # готов
-    gift = db.Column(db.String(100), default='')  # подарок из фортуны
-
-    # def __repr__(self):
+    state=db.Column(db.String(200)) # Статус заказа
+    tracking=db.Column(db.String(20),default='-') # Трек номер
+    comment=db.Column(db.String(200),default='') #Комментарий
+    finish_state=db.Column(db.Boolean, default=False) # готов
+    gift=db.Column(db.String(100),default='')        #подарок из фортуны
     def __repr__(self):
-        id_new = self.id
-        return str(id_new)
-
-
-"""
+        return f"""
 Номер заказа: {self.id}
 Номер телефона: {self.number}
 Имя заказчика: {self.name}
@@ -109,9 +100,9 @@ class Admin(db.Model):
     user_id = db.Column(db.BigInteger)  # id покупателя
     user_first_name = db.Column(db.String(50))
     user_last_name = db.Column(db.String(50))
-    referral = db.Column(db.String(50), default=0)
-    balans = db.Column(db.Integer, default=0)
-   # basket = db.Column(JSON)
+    referral=db.Column(db.String(50),default=0)
+    balans=db.Column(db.Integer,default=0)
+
 
     def __repr__(self):
         return f"""
@@ -120,17 +111,6 @@ ID: {self.user_id}
 Фамилия: {self.user_last_name}
 Баланс: {self.balans}
 """
-
-
-class Basket(db.Model):
-    __tablename__ = 'Basket'
-    query: sql.Select
-    id = db.Column(db.Integer, db.Sequence('user_id_seq'), primary_key=True)
-    user_id=db.Column(db.BigInteger)
-    item_id=db.Column(db.BigInteger)
-    quantity=db.Column(db.BigInteger)
-    amount=db.Column(db.BigInteger)
-
 
 
 async def create_db1():
