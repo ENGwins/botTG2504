@@ -25,5 +25,3 @@ dict_for_message_shipping = {
 
 
 
-ID_PHOTO_MENU = 'AgACAgIAAxkBAAIFFmKp0admQB74cEZtSeAiGeGE8-iUAAIBvzEbCWxRSTh2UbC4XVycAQADAgADcwADJAQ'
-Name_bot='liioviio_bot'

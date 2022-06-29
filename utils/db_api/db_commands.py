@@ -22,17 +22,17 @@ async def show_size_user(user_id):
 
 # Получение категорий
 async def get_categories() -> List[Item]:
-    return await Item.query.distinct(Item.category_code).gino.all()
+    return await Item.query.distinct(Item.category_code).where(Item.state=='active').gino.all()
 
 
 # Получение подкатегорий
 async def get_subcategories(category) -> List[Item]:
-    return await Item.query.distinct(Item.subcategory_code).where(Item.category_code == category).gino.all()
+    return await Item.query.distinct(Item.subcategory_code).where(and_(Item.category_code == category,Item.state=='active')).gino.all()
 
 
 # Подсчет количества товаров в категории
 async def count_items(category_code, subcategory_code=None):
-    conditions = [Item.category_code == category_code]
+    conditions = [Item.category_code == category_code,Item.state=='active']
 
     if subcategory_code:
         conditions.append(Item.subcategory_code == subcategory_code)
@@ -45,7 +45,8 @@ async def count_items(category_code, subcategory_code=None):
 async def get_items(category_code, subcategory_code) -> List[Item]:
     items = await Item.query.where(
         and_(Item.category_code == category_code,
-             Item.subcategory_code == subcategory_code)
+             Item.subcategory_code == subcategory_code,
+             Item.state=='active')
     ).gino.all()
     #    print(items)
     return items
@@ -317,3 +318,10 @@ async def chek_photos(item_id):
         if id != '0':
             photo_id_all.append(id)
     return photo_id_all
+
+
+async def change_catalog_(item_id,states):
+    item=await Item.query.where(Item.id == item_id).gino.first()
+    await item.update(state=states).apply()
+    return
+

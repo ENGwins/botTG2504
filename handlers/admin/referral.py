@@ -1,6 +1,8 @@
 from aiogram import types
 
-from data.message import Name_bot
+from data.config import Name_bot
+
+
 from keyboards.inline.user import user_cb
 from loader import dp, bot
 from utils.db_api.db_commands import check_user, check_referral
@@ -34,12 +36,12 @@ async def check_referral_id(referral_id, user_id):
         if int(referral_id) == user_id:
             referral_id = '0'
             return referral_id
-        elif not (await check_user(int(referral_id))):
-            referral_id = '0'
-            return referral_id
+        #elif not (await check_user(int(referral_id))):
+          #  referral_id = '0'
+          #  return referral_id
         else:
             referral_id = str(referral_id)
             return referral_id
     else:
-        referral_id = '0'
+        referral_id ='0'
         return referral_id

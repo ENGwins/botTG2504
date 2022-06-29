@@ -13,8 +13,8 @@ from typing import Union
 import emoji
 from datetime import datetime
 from aiogram import types
-from data.config import admins, SUPER_ADMIN
-from data.message import dict_for_message_shipping, ID_PHOTO_MENU
+from data.config import admins, SUPER_ADMIN, ID_PHOTO_MENU
+from data.message import dict_for_message_shipping
 from filters import IsPrivate
 from handlers.admin.referral import check_referral_id
 from keyboards.inline.govno_kb import categories_keyboard, items_keyboard, item_keyboard, \
@@ -311,21 +311,21 @@ async def start(message: types.Message, state: FSMContext):
             await bot.send_message(SUPER_ADMIN, 'Новый пользователь! \n'
                                                 f'ID {id_user}\n'
                                                 f'{firstname_user}')
-
-            start_command = message.text
-            referral_id = str(start_command[7:])
-            new_ref = await check_referral_id(referral_id, id_user)
+            new_ref = '0'
             await new_user(user_id=id_user, user_first_name=firstname_user, user_last_name=lastname_user,
                            referral=new_ref)
-            # new_ref_int=int(new_ref)
-            old_balans = await my_balans(new_ref)
-            new_balans = int(50) + int(old_balans)
+            start_command = message.text
+            referral_id = str(start_command[7:])
+            if referral_id!='':
+                new_ref =str(await check_referral_id(referral_id, id_user))
+                old_balans = int(await my_balans(int(new_ref)))
+                new_balans = 50 + old_balans
+                await update_my_balans(id_user=int(new_ref), new_balans=new_balans)
 
-            await update_my_balans(id_user=new_ref, new_balans=new_balans)
+                await bot.send_message(referral_id,
+                                       f"По вышей ссылке приглашен пользователь {message.from_user.first_name}\n"
+                                       f"Вам начислено 50 бонусов!")
 
-            await bot.send_message(referral_id,
-                                   f"По вышей ссылке приглашен пользователь {message.from_user.first_name}\n"
-                                   f"Вам начислено 50 бонусов!")
 
 
 

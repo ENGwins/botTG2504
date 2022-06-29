@@ -24,5 +24,7 @@ DATABASE=str(os.getenv('DATABASE'))
 
 POSTGRES_URI=f'postgresql://{PGUSER}:{PGPASSWD}@{ip}/{DATABASE}'
 
+Name_bot=str(os.getenv('Name_bot'))
 
+ID_PHOTO_MENU = str(os.getenv('ID_PHOTO_MENU'))
 #,558355680

@@ -30,6 +30,7 @@ class Item(db.Model):
     photo2= db.Column(db.String(250))
     photo3 = db.Column(db.String(250))
     photo4 = db.Column(db.String(250))
+    state = db.Column(db.String(250))
 
 
 class Size_users(db.Model):

@@ -22,6 +22,12 @@ async def adminPanel(message: types.Message):
     markup.insert(
         InlineKeyboardButton(text=f'Активные заказы - ({count})', callback_data='orders')
     )
+    markup.insert(
+        InlineKeyboardMarkup(text='Изменение каталога',callback_data=admin_cb.new(id_order='0',
+                                                                                  admin_change='chage_catalog',
+                                                                                  tracking='0',
+                                                                                  state='0'))
+    )
 
     await bot.send_message(message.from_user.id, 'Хаю-хай, в админ панель залетай!\n'
                                                  f'Кол-во пользователей - {count_users}', reply_markup=markup)
@@ -75,4 +81,16 @@ async def state_order(id_order):
     return markup
 
 
+async def change_catalog_kb(item_id):
+    markup=InlineKeyboardMarkup(row_width=2)
+    markup.row(
+        InlineKeyboardButton(text='Есть в наличии',callback_data=admin_cb.new(id_order=item_id,
+                                                        admin_change="active",
+                                                        tracking="None",
+                                                        state='None')),
 
+        InlineKeyboardButton(text='Закончились',callback_data=admin_cb.new(id_order=item_id,
+                                                        admin_change="deactivate",
+                                                        tracking="None",
+                                                        state='None')))
+    return markup
