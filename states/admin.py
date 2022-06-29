@@ -16,4 +16,5 @@ class admin_trak(StatesGroup):
 class change_catalog(StatesGroup):
     id_item=State()
     active=State()
-    deactivate=State()
+    sale1=State()
+    sale2=State()

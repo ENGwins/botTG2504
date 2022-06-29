@@ -52,6 +52,7 @@ async def get_items(category_code, subcategory_code) -> List[Item]:
     return items
 
 
+
 async def get_item(item_id) -> Item:
     item = await Item.select("name").where(Item.id == item_id).gino.scalar()
     return item
@@ -235,8 +236,16 @@ async def total_amount_basket(user_id):  # cумма в корзине
     for id in id_all:
         quantity = await Basket.select('quantity').where(
             and_(Basket.id == int(id[0]), Basket.user_id == user_id)).gino.scalar()
-        amount = await Basket.select('amount').where(
+        item_id=await Basket.select('item_id').where(
             and_(Basket.id == int(id[0]), Basket.user_id == user_id)).gino.scalar()
+        price = await get_price_item(item_id)
+        sale=await check_sale(item_id)
+        amount =int(price-sale)
+       # amount = await Basket.select('amount').where(
+        #    and_(Basket.id == int(id[0]), Basket.user_id == user_id)).gino.scalar()
+
+        #amount_new=aw
+
         sum = int(quantity) * int(amount)
         totalo.append(sum)
     for i in totalo:
@@ -325,3 +334,10 @@ async def change_catalog_(item_id,states):
     await item.update(state=states).apply()
     return
 
+async def update_sale(item_id,sale):
+    item=await Item.query.where(Item.id == item_id).gino.first()
+    await item.update(sale=sale).apply()
+    return
+
+async def check_sale(item_id):
+    return await Item.select('sale').where(Item.id == item_id).gino.scalar()

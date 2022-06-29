@@ -40,6 +40,7 @@ async def set_Vg(message: types.Message, state: FSMContext):
 # Выход из состояний
 @dp.message_handler(commands=(emoji.emojize(':scroll:') + 'Каталог'), state="*")
 @dp.message_handler(Text(equals=(emoji.emojize(':scroll:') + 'Каталог'), ignore_case=True), state="*")
+@dp.message_handler(Text('Отмена', ignore_case=True), state="*")
 async def cancel_handler1(message: types.Message, state: FSMContext):
     current_state = await state.get_state()
     if current_state is None:

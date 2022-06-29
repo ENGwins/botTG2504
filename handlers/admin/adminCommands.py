@@ -2,11 +2,13 @@ import json
 
 from aiogram import types
 from aiogram.dispatcher import FSMContext
+from aiogram.dispatcher.filters import Text
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 
 from filters import IsPrivate
 from handlers.admin.adminPanel import adminOrder, admin_cb, state_order, change_catalog_kb
 from keyboards.inline.govno_kb import bonus_kb
+from keyboards.keyvoard import mainMenu
 from loader import dp, bot
 from states.Mailing import MailingService
 
@@ -17,7 +19,15 @@ from states.Mailing import MailingService
 from states.admin import admin_trak, admin_bonus, change_catalog
 from utils.db_api.db_commands import search_order, update_tracking, search_order_id, update_state, update_fin_state, \
     update_my_balans, check_user, my_balans, \
-    search_com_qua_order, get_item, change_catalog_
+    search_com_qua_order, get_item, change_catalog_, get_price_item, update_sale, check_sale
+
+@dp.message_handler(Text('Отмена', ignore_case=True), state="*")
+async def cancel_handler1(message: types.Message, state: FSMContext):
+    current_state = await state.get_state()
+    if current_state is None:
+        return
+    await state.finish()
+    await bot.send_message(message.from_user.id, "Мы в главном меню", reply_markup=mainMenu)
 
 
 @dp.message_handler(IsPrivate(), state=MailingService.text)
@@ -175,17 +185,22 @@ async def select_state(message: types.Message, state: FSMContext):
     await message.delete()
     async with state.proxy() as data:
         data['id_item'] = id
+    try:
+        idd = int(id)
+        if await get_item(idd):
+            markup = await change_catalog_kb(idd)
+            name = await get_item(idd)
+            await bot.send_message(message.from_user.id, f'Выберите статус для товара - {name}', reply_markup=markup)
+            await change_catalog.active.set()
 
-    idd = int(id)
-    if await get_item(idd):
-        markup = await change_catalog_kb(idd)
-        name = await get_item(idd)
-        await bot.send_message(message.from_user.id, f'Выберите статус для товара - {name}', reply_markup=markup)
-        await change_catalog.active.set()
+        else:
+            # print('Товар с этим id отсутствует в базе, попробуйте ввести другой id')
+            await bot.send_message(message.from_user.id,
+                                   f'Товар с этим id отсутствует в базе, попробуйте ввести другой id')
 
-    else:
-        #print('Товар с этим id отсутствует в базе, попробуйте ввести другой id')
-        await bot.send_message(message.from_user.id, f'Товар с этим id отсутствует в базе, попробуйте ввести другой id')
+    except:
+        await bot.send_message(message.from_user.id, 'Необходимо ввести только цифры! ')
+
 
 
 @dp.callback_query_handler(admin_cb.filter(admin_change='deactivate'), state=change_catalog.active)
@@ -193,8 +208,8 @@ async def deactivate(callback: types.CallbackQuery, state: FSMContext):
     await callback.message.delete()
     async with state.proxy() as data:
         id = int(data['id_item'])
-    states='deactivate'
-    await change_catalog_(id,states)
+    states = 'deactivate'
+    await change_catalog_(id, states)
     await callback.bot.send_message(callback.from_user.id, f'Обновили стаус "НЕТ в налчии" - {id}')
     await callback.answer()
     await state.finish()
@@ -205,11 +220,62 @@ async def active(callback: types.CallbackQuery, state: FSMContext):
     await callback.message.delete()
     async with state.proxy() as data:
         id = int(data['id_item'])
-    states='active'
-    await change_catalog_(id,states)
+    states = 'active'
+    await change_catalog_(id, states)
     await callback.bot.send_message(callback.from_user.id, f'Обновили стаус "В наличии" - {id}')
     await callback.answer()
     await state.finish()
+
+
+@dp.callback_query_handler(admin_cb.filter(admin_change='sale'))
+async def search_id(callback: types.CallbackQuery):
+    await callback.bot.send_message(callback.from_user.id, 'Введите ID товара')
+    await change_catalog.sale1.set()
+    await callback.answer()
+
+
+@dp.message_handler(state=change_catalog.sale1)
+async def check_item(message: types.Message, state: FSMContext):
+    try:
+        id = int(message.text)
+        await message.delete()
+        async with state.proxy() as data:
+            data['id_item'] = id
+        idd = int(id)
+        if await get_item(idd):
+            # markup = await change_catalog_kb(idd)
+            name = await get_item(idd)
+            price = int(await get_price_item(idd))
+            sale=int(await check_sale(idd))
+            await bot.send_message(message.from_user.id, f'Введите размер скидки для товара \n\n<i>{name}</i>\n\n'
+                                                         f'Изначальная цена {price}'
+                                                         f'\nТекущая цена: {price-sale} Руб\n '
+                                                         f'Чтобы убрать скидку введите 0')
+            await change_catalog.sale2.set()
+        else:
+            # print('Товар с этим id отсутствует в базе, попробуйте ввести другой id')
+            await bot.send_message(message.from_user.id,
+                                   f'Товар с этим id отсутствует в базе, попробуйте ввести другой id')
+    except:
+        await bot.send_message(message.from_user.id, 'Необходимо ввести только цифры! ')
+
+
+@dp.message_handler(state=change_catalog.sale2)
+async def set_sale(message: types.Message, state: FSMContext):
+    try:
+        sale = int(message.text)
+        async with state.proxy() as data:
+            id_item = int(data['id_item'])
+        old_price = int(await get_price_item(id_item))
+        if old_price < sale < 0:
+            await bot.send_message(message.from_user.id, 'Сумма скидки не может быть больше стоимости товара,'
+                                                         '\nвведите еще раз размер скидки')
+        else:
+            await update_sale(id_item, sale)
+            await bot.send_message(message.from_user.id, 'Скидка добавлена!')
+            await state.finish()
+    except:
+        await bot.send_message(message.from_user.id, 'Необходимо ввести только цифры! ')
 
 
 @dp.callback_query_handler(text='bonus')

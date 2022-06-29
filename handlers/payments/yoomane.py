@@ -13,7 +13,7 @@ from keyboards.inline.user import user_cb
 from loader import bot, dp
 from states.pay import FSMpay
 from utils.db_api.database import Basket
-from utils.db_api.db_commands import get_name_item, get_price_item, get_decr_item, my_balans, show_basket
+from utils.db_api.db_commands import get_name_item, get_price_item, get_decr_item, my_balans, show_basket, check_sale
 
 
 @dp.callback_query_handler(user_cb.filter(buy='buynew'))  # при нижатии на продолжить
@@ -31,9 +31,11 @@ async def test_pay(call: types.CallbackQuery, callback_data: typing.Dict[str, st
     for item_in_order in item_id_orders[1]:
         item_id = item_in_order[0]
         price_get = int(await get_price_item(item_id)) * 100
+        sale = int(await check_sale(item_id)) * 100
+        price_fin = int(price_get - sale)
         quantity = int(await Basket.select('quantity').where(
             and_(Basket.user_id == id_user, Basket.item_id == item_id)).gino.scalar())
-        sum_amount += price_get * quantity
+        sum_amount += price_fin * quantity
 
     if sum_amount > 299900:
         balans = int(await my_balans(id_user) * 100)
@@ -43,18 +45,21 @@ async def test_pay(call: types.CallbackQuery, callback_data: typing.Dict[str, st
             item_id = item_in_order[0]
             name = await get_name_item(item_id)
             price_get = int(await get_price_item(item_id)) * 100
+            sale = int(await check_sale(item_id))*100
+            price_fin=int(price_get-sale)
+
             quantity = int(await Basket.select('quantity').where(
                 and_(Basket.user_id == id_user, Basket.item_id == item_id)).gino.scalar())
 
             quantity_t = quantity
             while not quantity_t == 0:
                 if old_balans > 100:
-                    sale_one_item_2 = price_get / 2
+                    sale_one_item_2 = price_fin / 2
                     if balans > sale_one_item_2:
-                        sale_one_item = int(price_get / 2)
+                        sale_one_item = int(price_fin / 2)
                     else:
                         sale_one_item = balans
-                    price_sale = int(price_get - sale_one_item)
+                    price_sale = int(price_fin - sale_one_item)
                     old_balans = int(old_balans - sale_one_item)
                     item = [item_id, name, price_sale, quantity]
                     callback_data_item.append(item)
@@ -62,7 +67,7 @@ async def test_pay(call: types.CallbackQuery, callback_data: typing.Dict[str, st
                     quantity_t -= 1
                     total_balans += sale_one_item
                 else:
-                    item = [item_id, name, price_get, quantity]
+                    item = [item_id, name, price_fin, quantity]
                     callback_data_item.append(item)
                     pl[item_id] = [quantity]
                     quantity_t -= 1
@@ -74,11 +79,13 @@ async def test_pay(call: types.CallbackQuery, callback_data: typing.Dict[str, st
                 and_(Basket.user_id == id_user, Basket.item_id == item_id)).gino.scalar())
             name = await get_name_item(item_id)
             price_get = int(await get_price_item(item_id)) * 100
-            item = [item_id, name, price_get, quantity]
+            sale = int(await check_sale(item_id))*100
+            price_fin=int(price_get-sale)
+            item = [item_id, name, price_fin, quantity]
             quantity_t = quantity
             while not quantity_t == 0:
                 quantity_t -= 1
-                item = [item_id, name, price_get, quantity]
+                item = [item_id, name, price_fin, quantity]
                 callback_data_item.append(item)
                 pl[item_id] = [quantity]
 

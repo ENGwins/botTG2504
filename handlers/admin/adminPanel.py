@@ -28,6 +28,12 @@ async def adminPanel(message: types.Message):
                                                                                   tracking='0',
                                                                                   state='0'))
     )
+    markup.insert(
+        InlineKeyboardMarkup(text='Установить скидку',callback_data=admin_cb.new(id_order='0',
+                                                                                  admin_change='sale',
+                                                                                  tracking='0',
+                                                                                  state='0'))
+    )
 
     await bot.send_message(message.from_user.id, 'Хаю-хай, в админ панель залетай!\n'
                                                  f'Кол-во пользователей - {count_users}', reply_markup=markup)

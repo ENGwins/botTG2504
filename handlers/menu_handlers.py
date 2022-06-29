@@ -30,7 +30,7 @@ from utils.db_api.database import Item
 from utils.db_api.db_commands import get_item, show_size_user, check_z, get_photo, get_name_item, get_price_item, \
     get_decr_item, check_user, user_all_check, new_order, update_my_balans, my_balans, new_user, check_referral_order, \
     total_amounts, total_amount_basket, chek_basket, add_item_basket, update_quantity, count_item_basket, show_basket, \
-    count_basket, delete_basket, chek_photos
+    count_basket, delete_basket, chek_photos, check_sale
 
 user_num_photo = {}
 
@@ -143,6 +143,7 @@ async def page(callback: types.CallbackQuery, callback_data: dict):
         name = await get_name_item(item_id_bas)
         decr = await get_decr_item(item_id_bas)
         price = await get_price_item(item_id_bas)
+        sale=await check_sale(item_id_bas)
         count_item_bask = await count_item_basket(user_id, item_id_bas)
         # text = await show_basket(user_id, page)
 
@@ -158,7 +159,7 @@ async def page(callback: types.CallbackQuery, callback_data: dict):
                     f"<u>Описание:</u>\n"
                     f" {decr}\n"
                     f"\n"
-                    f"<u>Цена:</u>\n <b>{price} Руб</b>\n\n"
+                    f"<u>Цена:</u>\n <b>{price-sale} Руб</b>\n\n"
                     f"Количество в корзине {count_item_bask}\n\n"
                     f"Страница {page + 1} из {count}", parse_mode="html", reply_markup=markup
         )
@@ -370,20 +371,32 @@ async def show_item_2(callback: types.CallbackQuery, callback_data: dict):
     price = await get_price_item(item_id)
     decr = await get_decr_item(item_id)
     await callback.answer()
+    sale=await check_sale(item_id)
+    new_price = price - sale
+    if sale:
+        caption = f"<u>Наименование:</u> \n<b>{name}</b>\n\n" \
+                   f"<u>Описание:</u>\n" \
+                   f"{decr}\n\n" \
+                   f"Акция! 😍\n\n" \
+                   f"<u>Цена:</u>\n <del><b>{price} Руб</b></del>\n" \
+                   f"<b> {new_price} Руб</b>"
+    else:
+
+        caption = f"<u>Наименование:</u> \n<b>{name}</b>\n\n" \
+                   f"<u>Описание:</u>\n" \
+                   f"{decr}\n\n" \
+                   f"<u>Цена:</u>\n <b>{price} Руб</b>\n"
+
 
     markup = await item_keyboard(category, subcategory, item_id, total_amount, max_pages=max_pages, key='book',
                                  page=current_page)
 
     await bot.edit_message_media(media=types.InputMediaPhoto(photo_id), chat_id=callback.message.chat.id,
                                  message_id=callback.message.message_id, reply_markup=markup)
+
     await bot.edit_message_caption(
         chat_id=callback.message.chat.id, message_id=callback.message.message_id,
-        caption=f"<u>Наименование:</u> \n<b>{name}</b>\n"
-                f"\n"
-                f"<u>Описание:</u>\n"
-                f" {decr}\n"
-                f"\n"
-                f"<u>Цена:</u>\n <b>{price} Руб</b>", parse_mode="html", reply_markup=markup
+        caption=caption,reply_markup=markup
     )
 
 
@@ -416,6 +429,21 @@ async def show_item(callback: types.CallbackQuery, category, subcategory, item_i
     price = await get_price_item(item_id)
     decr = await get_decr_item(item_id)
     await bot.answer_callback_query(callback.id)
+    sale=await check_sale(item_id)
+    new_price = price - sale
+    if sale:
+        caption = f"<u>Наименование:</u> \n<b>{name}</b>\n\n" \
+                   f"<u>Описание:</u>\n" \
+                   f"{decr}\n\n" \
+                   f"Акция! 😍\n\n" \
+                   f"<u>Цена:</u>\n <del><b>{price} Руб</b></del>\n" \
+                   f"<b> {new_price} Руб</b>"
+    else:
+
+        caption = f"<u>Наименование:</u> \n<b>{name}</b>\n\n" \
+                   f"<u>Описание:</u>\n" \
+                   f"{decr}\n\n" \
+                   f"<u>Цена:</u>\n <b>{price} Руб</b>\n"
     # for id in id_ph_all:
     #    media.append(InputMediaPhoto(id,f'{name}'))
 
@@ -423,12 +451,7 @@ async def show_item(callback: types.CallbackQuery, category, subcategory, item_i
                                  message_id=callback.message.message_id, reply_markup=markup)
     await bot.edit_message_caption(
         chat_id=callback.message.chat.id, message_id=callback.message.message_id,
-        caption=f"<u>Наименование:</u> \n<b>{name}</b>\n"
-                f"\n"
-                f"<u>Описание:</u>\n"
-                f" {decr}\n"
-                f"\n"
-                f"<u>Цена:</u>\n <b>{price} Руб</b>", parse_mode="html", reply_markup=markup
+        caption=caption, parse_mode="html", reply_markup=markup
     )
 
 

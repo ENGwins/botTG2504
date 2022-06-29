@@ -2,7 +2,7 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.callback_data import CallbackData
 
 from keyboards.inline.user import user_cb
-from utils.db_api.db_commands import count_items, get_categories, get_subcategories, get_items
+from utils.db_api.db_commands import count_items, get_categories, get_subcategories, get_items, check_sale
 
 menu_cd = CallbackData("show_menu1", "level", "category", "subcategory", "item_id", 'quantity', 'buy', 'id', 'page')
 basket_cd = CallbackData('basket', 'user_id')
@@ -343,21 +343,29 @@ async def categories_keyboard():
 
 
 async def subcategory_keyboard(category):
+    global button_text
     CURRENT_LEVEL = 1
     markup = InlineKeyboardMarkup(row_width=1)
 
     subcategories = await get_subcategories(category)  # получаем подкатегории для нашей категории
+
     for subcategory in subcategories:
         number_of_items = await count_items(category_code=category, subcategory_code=subcategory.subcategory_code)
+        #print(subcategory.id)
+        items = await get_items(category_code=category, subcategory_code=subcategory.subcategory_code)
+        for item in items:
 
-        button_text = f"{subcategory.subcategory_name}({number_of_items}шт)"
+            if await check_sale(item.id):
+                button_text = f"🔥 {subcategory.subcategory_name} ({number_of_items}шт)"
+            else:
+                button_text = f"{subcategory.subcategory_name} ({number_of_items}шт)"
         callback_data = make_callback_data(level=CURRENT_LEVEL + 1,
-                                           category=category,
-                                           subcategory=subcategory.subcategory_code)
+                                               category=category,
+                                               subcategory=subcategory.subcategory_code)
 
         markup.insert(
-            InlineKeyboardButton(text=button_text, callback_data=callback_data)
-        )
+                InlineKeyboardButton(text=button_text, callback_data=callback_data)
+            )
     markup.row(
         InlineKeyboardButton(
             text="Назад",
@@ -374,7 +382,10 @@ async def items_keyboard(category, subcategory):
     items = await get_items(category, subcategory)
 
     for item in items:
-        button_text = f"{item.name}- ₽{item.price}"
+        if await check_sale(item.id):
+            button_text = f"🔥 {item.name}- ₽ {item.price-item.sale} "
+        else:
+            button_text = f"{item.name}- ₽ {item.price}"
         callback_data = make_callback_data(level=CURRENT_LEVEL + 1,
                                            category=category, subcategory=subcategory,
                                            item_id=item.id)
