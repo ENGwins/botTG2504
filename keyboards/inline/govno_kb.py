@@ -350,22 +350,27 @@ async def subcategory_keyboard(category):
     subcategories = await get_subcategories(category)  # получаем подкатегории для нашей категории
 
     for subcategory in subcategories:
+        temp=False
         number_of_items = await count_items(category_code=category, subcategory_code=subcategory.subcategory_code)
         #print(subcategory.id)
         items = await get_items(category_code=category, subcategory_code=subcategory.subcategory_code)
-        for item in items:
-
-            if await check_sale(item.id):
-                button_text = f"🔥 {subcategory.subcategory_name} ({number_of_items}шт)"
-            else:
-                button_text = f"{subcategory.subcategory_name} ({number_of_items}шт)"
         callback_data = make_callback_data(level=CURRENT_LEVEL + 1,
-                                               category=category,
-                                               subcategory=subcategory.subcategory_code)
+                                           category=category,
+                                           subcategory=subcategory.subcategory_code)
+        for item in items:
+            if await check_sale(item.id):
+
+                temp=True
+
+        if temp:
+            button_text = f"🔥 {subcategory.subcategory_name} ({number_of_items}шт)"
+        else:
+            button_text = f"{subcategory.subcategory_name} ({number_of_items}шт)"
 
         markup.insert(
                 InlineKeyboardButton(text=button_text, callback_data=callback_data)
             )
+
     markup.row(
         InlineKeyboardButton(
             text="Назад",
